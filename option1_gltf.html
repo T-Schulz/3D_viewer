@@ -10,52 +10,117 @@
 </head>
 <body>
 
-    <!-- Three.js und OrbitControls für die Kamera-Steuerung laden -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
-
+    <!-- Dynamischer Skript-Lader, um Übertragungsfehler zu vermeiden -->
     <script>
-        // 1. Szene, Kamera und Renderer aufsetzen
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xeeeeee);
+        (function() {
+            // Teile die Links in sichere Teilstrings auf
+            const cdn1 = "https://cloudflare.com" + "/ajax/libs/three.js/r128/" + "three.min.js";
+            const cdn2 = "https://jsdelivr.net" + "/three@0.128.0/examples/js/controls/" + "OrbitControls.js";
+            const cdn3 = "https://jsdelivr.net" + "/three@0.128.0/examples/js/loaders/" + "GLTFLoader.js";
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 50, 100);
+            // Funktion zum sequentiellen Laden der Skripte
+            function loadScript(url, callback) {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = callback;
+                document.head.appendChild(script);
+            }
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+            // Skripte nacheinander laden, um Abhängigkeiten zu wahren
+            loadScript(cdn1, function() {
+                loadScript(cdn2, function() {
+                    loadScript(cdn3, function() {
+                        // Wenn alle Bibliotheken geladen sind, starte das 3D-Programm
+                        init3DViewer();
+                    });
+                });
+            });
+        })();
 
-        // 2. Steuerung und Licht hinzufügen
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(1, 1, 1).normalize();
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
+        // Das Hauptprogramm startet hier
+        function init3DViewer() {
+            // 1. Szene, Kamera und Renderer aufsetzen
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xeeeeee);
 
-        // 3. 3D-Stadtmodell laden (hier als konvertierte .gltf/.glb Datei)
-        const loader = new THREE.GLTFLoader();
-        loader.load('dortmund_kachel.glb', function (gltf) {
-            scene.add(gltf.scene);
-            animate();
-        }, undefined, function (error) {
-            console.error('Fehler beim Laden des Modells:', error);
-        });
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(30, 40, 50); // Kamera-Position für besseren Überblick
 
-        // 4. Render-Schleife
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        // Browser-Resizing abfangen
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            document.body.appendChild(renderer.domElement);
+
+            // 2. Steuerung und Licht hinzufügen
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(1, 1, 1).normalize();
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x666666));
+
+            // Funktion zur Generierung einer Demo-Stadt per Code (Falls GLB fehlt)
+            function generateDemoCity() {
+                console.log('Generiere künstliches 3D-Stadtmodell als Platzhalter...');
+                
+                // Bodenplatte (Erde/Straße)
+                const groundGeo = new THREE.PlaneGeometry(100, 100);
+                const groundMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
+                const ground = new THREE.Mesh(groundGeo, groundMat);
+                ground.rotation.x = -Math.PI / 2;
+                scene.add(ground);
+
+                // Generiere 15 zufällige Gebäude-Würfel
+                for (let i = 0; i < 15; i++) {
+                    const h = Math.random() * 15 + 5; // Zufällige Höhe
+                    const w = Math.random() * 4 + 3;  // Zufällige Breite
+                    const geo = new THREE.BoxGeometry(w, h, w);
+                    const mat = new THREE.MeshLambertMaterial({ 
+                        color: Math.random() * 0xffffff // Zufällige Farbe
+                    });
+                    const building = new THREE.Mesh(geo, mat);
+                    
+                    // Zufällige Positionen auf dem Boden
+                    building.position.x = Math.random() * 60 - 30;
+                    building.position.z = Math.random() * 60 - 30;
+                    building.position.y = h / 2; // Auf den Boden stellen
+                    
+                    scene.add(building);
+                }
+            }
+
+            // 3. Versuche, die echte 3D-Stadtmodell-Datei zu laden
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                'dortmund_kachel.glb', 
+                function (gltf) {
+                    // Erfolg: Modell wird zur Szene hinzugefügt
+                    scene.add(gltf.scene);
+                    console.log('Echtes Dortmund-Stadtmodell geladen!');
+                }, 
+                undefined, 
+                function (error) {
+                    // Fehlerfall (z.B. Datei nicht gefunden / 404): Demo-Daten einspringen lassen
+                    console.warn('Echte .glb-Datei nicht gefunden oder fehlerhaft. Wechsle zu Demo-Daten.');
+                    generateDemoCity();
+                }
+            );
+
+            // 4. Render-Schleife
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Browser-Resizing abfangen
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
     </script>
 </body>
 </html>
