@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Option 2: CityJSON 3D-Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        .back-btn { position: absolute; top: 20px; left: 20px; background: #333; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; z-index: 10; }
+        .info-box { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 5px; z-index: 10; max-width: 300px; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-btn">← Zurück zur Hauptseite</a>
+    <div class="info-box">
+        <h3>CityJSON Viewer</h3>
+        <p id="status">Lade CityJSON-Datei...</p>
+    </div>
+
+    <!-- Three.js Bibliotheken laden -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://jsdelivr.net"></script>
+
+    <script>
+        // 1. Three.js Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x23272a);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(150, 150, 150);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        
+        // Beleuchtung
+        const light = new THREE.DirectionalLight(0xffffff, 1.5);
+        light.position.set(300, 500, 200);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x777777));
+
+        // Boden-Gitternetz zur Orientierung
+        const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x333333);
+        scene.add(gridHelper);
+
+        // 2. CityJSON laden
+        fetch('dortmund.city.json')
+            .then(response => response.json())
+            .then(cityjson => {
+                renderCityJSON(cityjson);
+            })
+            .catch(err => {
+                document.getElementById('status').innerText = "Fehler beim Laden der CityJSON!";
+                console.error(err);
+            });
+
+        function renderCityJSON(data) {
+            const vertices = data.vertices;
+            const objects = data.CityObjects;
+            
+            // Standardmaterial für CityJSON-Gebäude
+            const material = new THREE.MeshLambertMaterial({ 
+                color: 0xffaa00, 
+                side: THREE.DoubleSide // Wichtig, da CityJSON-Flächen oft einseitig sind
+            });
+
+            // Offsets für die korrekte Positionierung (Zentrierung im Browser)
+            let offsetX = 0, offsetY = 0, offsetZ = 0;
+            
+            // Falls CityJSON eine 'transform' Eigenschaft hat, nutzen wir diese
+            if (data.transform) {
+                offsetX = data.transform.translate[0];
+                offsetY = data.transform.translate[1];
+                offsetZ = data.transform.translate[2];
+            } else if (vertices.length > 0) {
+                // Alternativ nehmen wir den allerersten Punkt als mathematischen Nullpunkt
+                offsetX = vertices[0][0];
+                offsetY = vertices[0][1];
+                offsetZ = vertices[0][2];
+            }
+
+            let buildingCount = 0;
+
+            // Iteration durch alle CityObjects (Gebäude)
+            for (const objId in objects) {
+                const obj = objects[objId];
+                
+                // Wir filtern primär nach Gebäuden
+                if (obj.type !== 'Building' && obj.type !== 'BuildingPart') continue;
+
+                obj.geometry.forEach(geom => {
+                    // CityJSON speichert Flächen in verschachtelten Arrays (Boundaries)
+                    const boundaries = geom.boundaries;
+
+                    boundaries.forEach(polygonGroup => {
+                        // Bei LoD1 / LoD2 Modellen extrahieren wir die äußeren Ringe der Flächen
+                        polygonGroup.forEach(ring => {
+                            
+                            // Erstellung eines benutzerdefinierten 3D-Meshes für die Gebäudewand/-dach
+                            const geometry = new THREE.BufferGeometry();
+                            const positions = [];
+
+                            // Da Three.js nur Dreiecke versteht (Tessellierung), nutzen wir einen einfachen Triangle Fan 
+                            // für die Polygone des CityJSON-Modells
+                            for (let i = 1; i < ring.length - 1; i++) {
+                                const idx0 = ring[0];
+                                const idx1 = ring[i];
+                                const idx2 = ring[i + 1];
+
+                                // Punkt 1
+                                positions.push(vertices[idx0][0] - offsetX, vertices[idx0][2] - offsetZ, -(vertices[idx0][1] - offsetY));
+                                // Punkt 2
+                                positions.push(vertices[idx1][0] - offsetX, vertices[idx1][2] - offsetZ, -(vertices[idx1][1] - offsetY));
+                                // Punkt 3
+                                positions.push(vertices[idx2][0] - offsetX, vertices[idx2][2] - offsetZ, -(vertices[idx2][1] - offsetY));
+                            }
+
+                            if (positions.length > 0) {
+                                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                                geometry.computeVertexNormals(); // Wichtig für korrekten Schattenwurf
+                                
+                                const mesh = new THREE.Mesh(geometry, material);
+                                scene.add(mesh);
+                            }
+                        });
+                    });
+                });
+                buildingCount++;
+            }
+
+            document.getElementById('status').innerText = `${buildingCount} CityJSON Gebäude erfolgreich geladen.`;
+            animate();
+        }
+
+        // 3. Render-Schleife
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Fenstergröße anpassen
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

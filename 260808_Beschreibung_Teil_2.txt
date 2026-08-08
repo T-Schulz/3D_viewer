@@ -1,0 +1,44 @@
+Wie Sie das lokal testen könnenDa Browser das direkte Laden von lokalen Dateien (fetch('daten.csv')) 
+aus Sicherheitsgründen blockieren, müssen Sie die Seite über einen lokalen Server starten.
+
+Öffnen Sie Ihr Terminal/Eingabeaufforderung im Projektordner.
+Starten Sie einen Python-Server mit:bashpython -m http.server 8000
+Verwende Code mit Vorsicht.
+Öffnen Sie im Browser: http://localhost:8000/option3_csv.html
+Sobald Sie die Dateien auf GitHub hochladen, funktioniert der fetch-Befehl dort direkt und ohne 
+Einschränkungen.
+
+
+Ihre empfohlene Ordnerstruktur auf GitHubDamit alle Verlinkungen fehlerfrei funktionieren, 
+organisieren Sie Ihr Repository am besten so:
+text
+mein-repository/
+├── index.html               <-- Die neue Hauptseite (Code oben)
+├── option1_gltf.html        <-- Der Three.js Viewer für .gltf/.glb
+├── option2_json.html        <-- Ihr JSON-Viewer
+├── option3_csv.html         <-- Der CSV-Viewer aus der vorherigen Antwort
+├── option4_pydeck.html      <-- Die von Python generierte HTML-Datei
+├── dortmund_kachel.glb      <-- 3D-Modell für Option 1
+└── daten.csv                <-- Tabellendaten für Option 3
+
+Das Prinzip von CityJSON verstehen
+Ein typisches CityJSON-Modell besteht im Kern aus zwei Listen:
+vertices: Eine lange Liste aller 3D-Koordinatenpunkte [X, Y, Z] im Raum.
+CityObjects: Die eigentlichen Gebäude. Diese enthalten keine eigenen Koordinaten, sondern Verweise 
+(Indizes) auf die vertices-Liste, um die Wände und Dächer zu formen.
+
+Was machen Sie mit den GML-Dateien?
+Da das direkte Laden von .gml im Browser zu extremen Rucklern führt, sollten Sie Ihre GML-Dateien vor 
+dem Hochladen auf GitHub in CityJSON konvertieren.
+Das offizielle, kostenlose Befehlszeilen-Tool der CityJSON-Entwickler heißt citygml-tools. Sie können 
+es auf Ihrem Computer installieren und Ihre Dortmund-GML mit einem einzigen Befehl umwandeln:
+
+bash
+citygml-tools to-cityjson dortmund_kachel.gml
+
+Verwende Code mit Vorsicht.
+Das Tool generiert daraus automatisch die performante dortmund_kachel.city.json, die Sie direkt für 
+das obige Skript verwenden können.
+
+
+

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Option 3: CSV Parser Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+        .back-btn { position: absolute; top: 20px; left: 20px; background: #333; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; z-index: 10; }
+        .info-box { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); color: white; padding: 15px; border-radius: 5px; z-index: 10; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-btn">← Zurück zur Hauptseite</a>
+    <div class="info-box">
+        <h3>CSV 3D-Viewer</h3>
+        <p id="status">Lade CSV-Daten...</p>
+    </div>
+
+    <!-- Three.js Bibliotheken laden -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://jsdelivr.net"></script>
+
+    <script>
+        // 1. Three.js Grund-Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a); // Dunkler Hintergrund für besseren Kontrast
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(100, 100, 100);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        
+        // Lichtquellen hinzufügen
+        const light = new THREE.DirectionalLight(0xffffff, 1.2);
+        light.position.set(200, 400, 300);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x666666));
+
+        // Hilfsnetz am Boden zeichnen
+        const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x222222);
+        scene.add(gridHelper);
+
+        // 2. CSV laden und parsen
+        fetch('daten.csv')
+            .then(response => response.text())
+            .then(csvText => {
+                parseAndRenderCSV(csvText);
+            })
+            .catch(err => {
+                document.getElementById('status').innerText = "Fehler beim Laden der CSV!";
+                console.error(err);
+            });
+
+        function parseAndRenderCSV(text) {
+            const lines = text.split('\n');
+            let baseLinesCount = 0;
+
+            // Erste Zeile sind die Header (id, x, y, height)
+            const headers = lines[0].split(',');
+
+            // Offsets, um das Modell im Ursprung (0,0,0) zu zentrieren
+            let offsetX = 0;
+            let offsetY = 0;
+            let firstPoint = true;
+
+            // Standard-Material für die Gebäude
+            const material = new THREE.MeshLambertMaterial({ color: 0x00a8ff });
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue; // Leere Zeilen überspringen
+
+                const values = line.split(',');
+                const x = parseFloat(values[1]);
+                const y = parseFloat(values[2]);
+                const height = parseFloat(values[3]);
+
+                if (isNaN(x) || isNaN(y) || isNaN(height)) continue;
+
+                // Beim ersten Gebäude setzen wir den Nullpunkt fest
+                if (firstPoint) {
+                    offsetX = x;
+                    offsetY = y;
+                    firstPoint = false;
+                }
+
+                // Lokale Koordinaten berechnen (Zentrierung)
+                const localX = x - offsetX;
+                const localZ = y - offsetY; // In Three.js ist Z die Tiefe (horizontal) und Y die Höhe (vertikal)
+
+                // 3D-Klotz (Box) für das Gebäude erstellen
+                // Breite: 10m, Tiefe: 10m (als Platzhalter für die Grundfläche), Höhe aus CSV
+                const geometry = new THREE.BoxGeometry(10, height, 10);
+                
+                // Den Drehpunkt der Box an die Unterseite verschieben, damit sie auf dem Boden steht
+                geometry.translate(0, height / 2, 0);
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(localX, 0, localZ);
+                
+                scene.add(mesh);
+                baseLinesCount++;
+            }
+
+            document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
+            animate();
+        }
+
+        // 3. Render-Schleife
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Fenstergröße anpassen
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

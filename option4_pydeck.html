@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Stadtmodell Dortmund Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { width: 100vw; height: 100vh; display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- Three.js und OrbitControls für die Kamera-Steuerung laden -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
+
+    <script>
+        // 1. Szene, Kamera und Renderer aufsetzen
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xeeeeee);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 50, 100);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Steuerung und Licht hinzufügen
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(1, 1, 1).normalize();
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // 3. 3D-Stadtmodell laden (hier als konvertierte .gltf/.glb Datei)
+        const loader = new THREE.GLTFLoader();
+        loader.load('dortmund_kachel.glb', function (gltf) {
+            scene.add(gltf.scene);
+            animate();
+        }, undefined, function (error) {
+            console.error('Fehler beim Laden des Modells:', error);
+        });
+
+        // 4. Render-Schleife
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Browser-Resizing abfangen
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

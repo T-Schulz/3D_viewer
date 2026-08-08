@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Stadtmodell Dortmund - Web-Viewer Prototypen</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 1rem 2rem 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--accent-color);
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-color);
+        }
+
+        .card h2 {
+            font-size: 1.4rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: #0284c7;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0 0 1.5rem 0;
+            flex-grow: 1;
+        }
+
+        .btn {
+            display: block;
+            text-align: center;
+            background-color: var(--accent-color);
+            color: #0f172a;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.75rem;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid #1e293b;
+        }
+
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>3D Stadtmodell Dortmund</h1>
+        <p>Experimentelle Web-Viewer zur Visualisierung offener Geodaten in verschiedenen Formaten.</p>
+    </header>
+
+    <div class="container">
+        <div class="grid">
+
+            <!-- Karte 1: glTF/Three.js -->
+            <div class="card">
+                <div>
+                    <span class="badge" style="background-color: #22c55e;">Web Standard</span>
+                    <h2>1. glTF / GLB Viewer</h2>
+                    <p>Visualisierung über eine in glTF konvertierte 3D-Kachel. Bietet die beste Performance, flüssige Schatten und echte 3D-Meshes via Three.js.</p>
+                </div>
+                <a href="option1_gltf.html" class="btn">Viewer öffnen</a>
+            </div>
+
+            <!-- Karte 2: JSON -->
+            <div class="card">
+                <div>
+                    <span class="badge" style="background-color: #3b82f6;">Strukturiert</span>
+                    <h2>2. JSON / CityJSON</h2>
+                    <p>Lädt semantische Gebäudedaten aus einer JSON-Struktur. Ideal, wenn zusätzlich zur Geometrie auch Attribute wie Baujahr oder Nutzung dargestellt werden sollen.</p>
+                </div>
+                <a href="option2_json.html" class="btn">Viewer öffnen</a>
+            </div>
+
+            <!-- Karte 3: CSV -->
+            <div class="card">
+                <div>
+                    <span class="badge" style="background-color: #eab308; color: black;">Koordinaten</span>
+                    <h2>3. CSV Punkt-Parser</h2>
+                    <p>Liest rohe X/Y-Koordinaten und Höhenangaben direkt aus einer CSV-Tabelle ein und generiert die 3D-Körper dynamisch zur Laufzeit im Browser.</p>
+                </div>
+                <a href="option3_csv.html" class="btn">Viewer öffnen</a>
+            </div>
+
+            <!-- Karte 4: Python/Pydeck HTML -->
+            <div class="card">
+                <div>
+                    <span class="badge" style="background-color: #a855f7;">Prerendered</span>
+                    <h2>4. Pydeck Map-Viewer</h2>
+                    <p>Eine via Python (Pydeck) generierte, interaktive Karten-Oberfläche, eingebettet auf einer Mapbox-Karte mit extrudierten Gebäude-Polygonen.</p>
+                </div>
+                <a href="option4_pydeck.html" class="btn">Viewer öffnen</a>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        Datenquelle: <a href="https://europa.eu" target="_blank" rel="noopener">Stadt Dortmund / GovData</a> | Gehostet auf GitHub Pages
+    </footer>
+
+</body>
+</html>

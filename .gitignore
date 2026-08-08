@@ -1,0 +1,16 @@
+# Virtuelle Umgebung von uv
+.venv/
+
+# Python Cache-Dateien
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Betriebssystem-Dateien
+.DS_Store
+Thumbs.db
+
+# Optionale IDE-Ordner (falls Sie VS Code oder PyCharm nutzen)
+.vscode/
+.idea/
