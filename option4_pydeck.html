@@ -2,113 +2,148 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-    <title>pydeck</title>
-        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.js"></script>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css" />
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.14.0/dist/maplibre-gl.css" />
-    <script src='https://cdn.jsdelivr.net/npm/@deck.gl/jupyter-widget@~9.3.*/dist/index.js'></script>
-    <link rel="stylesheet" href=https://cdn.jsdelivr.net/npm/@deck.gl/widgets@~9.3.*/dist/stylesheet.css />
+    <title>Option 4: Pydeck 3D-Viewer Dortmund</title>
+    
     <style>
-    body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #1a1a1a;
+      }
 
-#deck-container {
-  width: 100vw;
-  height: 100vh;
-}
+      #deck-container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
 
-#deck-container canvas {
-  z-index: 1;
-  background: none;
-}
+      #deck-container canvas {
+        z-index: 2 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+      }
 
-#deck-container .error_text {
-  color: red;
-  background: none;
-  position: absolute;
-  z-index: 100;
-}
+      /* Unzerstörbares Kartenfundament direkt im Hintergrund */
+      #fallback-map-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        /* Die URL wird gleich dynamisch per JavaScript injiziert */
+        background-repeat: repeat;
+        background-size: 256px 256px;
+        opacity: 0.8;
+      }
+
+      .back-btn { 
+        position: absolute; 
+        top: 20px; 
+        left: 20px; 
+        background: #333; 
+        color: white; 
+        padding: 10px 15px; 
+        text-decoration: none; 
+        border-radius: 5px; 
+        z-index: 100; 
+        font-family: sans-serif;
+      }
     </style>
   </head>
   <body>
+    <a href="index.html" class="back-btn">← Zurück zur Hauptseite</a>
+
     <div id="deck-container">
+       <div id="fallback-map-background"></div>
     </div>
-  </body>
-  <script>
-    const container = document.getElementById('deck-container');
-    const jsonInput = {
-  "initialViewState": {
-    "bearing": 10,
-    "latitude": 51.5136,
-    "longitude": 7.4653,
-    "pitch": 45,
-    "zoom": 14.5
-  },
-  "layers": [
-    {
-      "@@type": "TileLayer",
-      "data": "https://openstreetmap.org{z}/{x}/{y}.png",
-      "id": "base-map-tiles",
-      "maxZoom": 19,
-      "minZoom": 0,
-      "tileSize": 256
-    },
-    {
-      "@@type": "ColumnLayer",
-      "data": [
-        {
-          "height": 25,
-          "lat": 51.5136,
-          "lng": 7.4653
-        },
-        {
-          "height": 45,
-          "lat": 51.5145,
-          "lng": 7.468
-        },
-        {
-          "height": 15,
-          "lat": 51.5125,
-          "lng": 7.461
-        },
-        {
-          "height": 30,
-          "lat": 51.515,
-          "lng": 7.4635
+
+    <!-- Dynamischer Link-Lader, um das Abschneiden im Chat zu verhindern -->
+    <script>
+      (function() {
+        // 1. Sichere Injektion der Hintergrund-Karten-URL gegen Chat-Verstümmelung
+        const mapPart1 = "https://a.basemaps.cartocdn.com";
+        const mapPart2 = "/dark_all/14/8519/5446.png";
+        document.getElementById('fallback-map-background').style.backgroundImage = "url('" + mapPart1 + mapPart2 + "')";
+
+        // 2. Die unpkg-Links stückeln wir in sichere Teilstrings auf
+        const link1 = "https://unpkg.com" + "/deck.gl@~9.0.0/" + "dist.min.js";
+        const link2 = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.js";
+        const cssLink = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.css";
+
+        // CSS-Datei dynamisch in den Header laden
+        const style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = cssLink;
+        document.head.appendChild(style);
+
+        // JavaScript-Dateien nacheinander laden
+        function loadScript(url, callback) {
+          const script = document.createElement('script');
+          script.src = url;
+          script.onload = callback;
+          document.head.appendChild(script);
         }
-      ],
-      "elevationScale": 1,
-      "extruded": true,
-      "getElevation": "@@=height",
-      "getFillColor": "@@=[200, 30, 0, 160]",
-      "getPosition": "@@=[lng, lat]",
-      "id": "b717e783-5180-4878-bb69-2bcdb9e47a2d",
-      "pickable": true,
-      "radius": 25
-    }
-  ],
-  "views": [
-    {
-      "@@type": "MapView",
-      "controller": true
-    }
-  ]
-};
-    const tooltip = true;
-    const customLibraries = null;
-    const configuration = null;
 
-    const deckInstance = createDeck({
-                  container,
-      jsonInput,
-      tooltip,
-      customLibraries,
-      configuration,
+        loadScript(link1, function() {
+          loadScript(link2, function() {
+            start3DMap();
           });
+        });
+      })();
 
-  </script>
+      function start3DMap() {
+        const container = document.getElementById('deck-container');
+        
+        const layerData = [
+          { "height": 25, "lat": 51.5136, "lng": 7.4653 },
+          { "height": 45, "lat": 51.5145, "lng": 7.468 },
+          { "height": 15, "lat": 51.5125, "lng": 7.461 },
+          { "height": 30, "lat": 51.515, "lng": 7.4635 }
+        ];
+
+        const r = 200, g = 30, b = 0, alpha = 200;
+
+        // Sicher gestückelte URL für eine voll-interaktive Live-Karte
+        const tileUrl = "https://a.basemaps.cartocdn.com" + "/dark_all/{z}/{x}/{y}.png";
+
+        new deck.DeckGL({
+          container: container,
+          initialViewState: {
+            bearing: 10,
+            latitude: 51.5136,
+            longitude: 7.4653,
+            pitch: 45,
+            zoom: 14.5
+          },
+          layers: [
+            // NEU: Ein echtes interaktives Karten-Layer im JavaScript
+            new deck.TileLayer({
+              id: 'live-base-map',
+              data: tileUrl,
+              minZoom: 0,
+              maxZoom: 20,
+              tileSize: 256,
+              renderSubLayers: props => new deck.BitmapLayer(props)
+            }),
+            // Ihre 3D-Gebäude-Säulen
+            new deck.ColumnLayer({
+              id: "dortmund-columns",
+              data: layerData,
+              getPosition: d => [d.lng, d.lat],
+              getElevation: d => d.height,
+              getFillColor: [r, g, b, alpha],
+              radius: 25,
+              elevationScale: 1,
+              extruded: true,
+              pickable: true
+            })
+          ],
+          controller: true,
+          getTooltip: ({object}) => object && `Höhe: ${object.height}m`
+        });
+      }
+    </script>
+  </body>
 </html>
