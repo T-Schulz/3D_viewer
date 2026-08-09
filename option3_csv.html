@@ -125,9 +125,11 @@
                     if (!line) continue;
 
                     const values = line.split(',');
-                    const x = parseFloat(values[1]);
-                    const y = parseFloat(values[2]);
-                    const height = parseFloat(values[3]);
+                    
+                    // KORREKTUR: Die Spalten-Indizes aus der CSV-Zeile sauber auslesen
+                    const x = parseFloat(values[1]);      // Spalte 2: X-Koordinate
+                    const y = parseFloat(values[2]);      // Spalte 3: Y-Koordinate
+                    const height = parseFloat(values[3]); // Spalte 4: Höhe
 
                     if (isNaN(x) || isNaN(y) || isNaN(height)) continue;
 
@@ -141,19 +143,19 @@
                     return;
                 }
 
-                // Der exakte Mittelpunkt aller Punkte aus der Excel/CSV-Tabelle
+                // Der exakte Mittelpunkt aller 4 Punkte aus Ihrer CSV-Datei
                 const offsetX = sumX / parsedPoints.length;
                 const offsetY = sumY / parsedPoints.length;
 
                 // Gebäude rendern
                 parsedPoints.forEach(p => {
-                    // Zentrierte Koordinaten berechnen
+                    // Zentrierte Koordinaten berechnen (Verschiebung in den Nullpunkt)
                     const localX = p.x - offsetX;
                     const localZ = p.y - offsetY; 
 
                     // 3D-Klotz bauen (Breite: 12m, Tiefe: 12m, Höhe aus CSV)
                     const geometry = new THREE.BoxGeometry(12, p.height, 12);
-                    geometry.translate(0, p.height / 2, 0); // Fußpunkt auf den Boden setzen
+                    geometry.translate(0, p.height / 2, 0); // Fußpunkt auf das Gitternetz setzen
 
                     const mesh = new THREE.Mesh(geometry, material);
                     mesh.position.set(localX, 0, localZ);
@@ -161,6 +163,11 @@
                     scene.add(mesh);
                     baseLinesCount++;
                 });
+
+                // Kamera automatisch auf die Gruppe der 4 Gebäude ausrichten
+                camera.position.set(60, 60, 60);
+                controls.target.set(0, 0, 0);
+                controls.update();
 
                 if(!document.getElementById('status').innerText.includes("Demodaten")) {
                     document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
