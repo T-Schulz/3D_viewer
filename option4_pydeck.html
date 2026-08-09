@@ -24,7 +24,6 @@
         background-color: transparent !important;
       }
 
-      /* KORREKTUR: Das statische Hintergrundbild wurde entfernt, um Kachelung zu verhindern */
       #fallback-map-background {
         position: absolute;
         top: 0;
@@ -94,8 +93,8 @@
 
         const r = 200, g = 30, b = 0, alpha = 200;
 
-        // Sicher gestückelte URL für die interaktive Live-Karte
-        const tileUrl = "https://cartocdn.com" + "/dark_all/{z}/{x}/{y}.png";
+        # KORREKTUR: CORS-freie, offizielle OpenStreetMap-Server-URL gestückelt
+        const tileUrl = "https://openstreetmap.org" + "/{z}/{x}/{y}.png";
 
         new deck.DeckGL({
           container: container,
@@ -107,18 +106,18 @@
             zoom: 14.5
           },
           layers: [
-            // Echte, funktionierende Interaktive Karte (deck.gl v9 kompatibel)
+            // Das unzerstörbare OpenStreetMap-Layer für deck.gl v9
             new deck.TileLayer({
               id: 'live-base-map',
               data: tileUrl,
               minZoom: 0,
-              maxZoom: 20,
+              maxZoom: 19,
               tileSize: 256,
-              // KORREKTUR: Die geladenen Bilddaten (data) werden explizit an 'image' übergeben
+              // Vereinfachtes Rendering ohne Textur-Mißverständnisse im Browser
               renderSubLayers: props => {
                 const {bbox} = props.tile;
-                return new deck.BitmapLayer(props, {
-                  data: null,
+                return new deck.BitmapLayer({
+                  id: props.id,
                   image: props.data,
                   bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
                 });
