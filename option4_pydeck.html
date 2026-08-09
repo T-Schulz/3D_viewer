@@ -93,7 +93,7 @@
 
         const r = 200, g = 30, b = 0, alpha = 200;
 
-        # KORREKTUR: CORS-freie, offizielle OpenStreetMap-Server-URL gestückelt
+        // KORREKTUR: CORS-freie, offizielle OpenStreetMap-Server-URL gestückelt
         const tileUrl = "https://openstreetmap.org" + "/{z}/{x}/{y}.png";
 
         new deck.DeckGL({
@@ -113,7 +113,6 @@
               minZoom: 0,
               maxZoom: 19,
               tileSize: 256,
-              // Vereinfachtes Rendering ohne Textur-Mißverständnisse im Browser
               renderSubLayers: props => {
                 const {bbox} = props.tile;
                 return new deck.BitmapLayer({
