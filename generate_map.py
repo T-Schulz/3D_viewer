@@ -16,15 +16,14 @@ if not os.path.exists(csv_filename):
 data = pd.read_csv(csv_filename)
 
 # ========================================================
-# REPARATUR: get_tile_data gelöscht, um Parser-Absturz zu verhindern!
+# REPARATUR: OpenStreetMap erzwungen & über 'data' zugewiesen
 # ========================================================
 background_map_layer = pdk.Layer(
     "TileLayer",
-    # Die exakte Adresse für die Carto-Dunkelkarte
-    "https://cartocdn.com{z}/{x}/{y}.png",
+    data="https://openstreetmap.org{z}/{x}/{y}.png", # Direkt OSM als Datenquelle deklariert
     id="base-map-tiles",
     min_zoom=0,
-    max_zoom=20,
+    max_zoom=19,
     tile_size=256,
 )
 
