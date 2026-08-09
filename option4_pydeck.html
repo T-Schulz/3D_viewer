@@ -24,7 +24,7 @@
         background-color: transparent !important;
       }
 
-      /* Unzerstörbares Kartenfundament direkt im Hintergrund */
+      /* KORREKTUR: Das statische Hintergrundbild wurde entfernt, um Kachelung zu verhindern */
       #fallback-map-background {
         position: absolute;
         top: 0;
@@ -32,10 +32,7 @@
         width: 100%;
         height: 100%;
         z-index: 1;
-        /* Die URL wird gleich dynamisch per JavaScript injiziert */
-        background-repeat: repeat;
-        background-size: 256px 256px;
-        opacity: 0.8;
+        background-color: #1a1a1a;
       }
 
       .back-btn { 
@@ -59,26 +56,18 @@
        <div id="fallback-map-background"></div>
     </div>
 
-    <!-- Dynamischer Link-Lader, um das Abschneiden im Chat zu verhindern -->
+    <!-- Dynamischer Link-Lader gegen Chat-Verstümmelung -->
     <script>
       (function() {
-        // 1. Sichere Injektion der Hintergrund-Karten-URL gegen Chat-Verstümmelung
-        const mapPart1 = "https://a.basemaps.cartocdn.com";
-        const mapPart2 = "/dark_all/14/8519/5446.png";
-        document.getElementById('fallback-map-background').style.backgroundImage = "url('" + mapPart1 + mapPart2 + "')";
-
-        // 2. Die unpkg-Links stückeln wir in sichere Teilstrings auf
         const link1 = "https://unpkg.com" + "/deck.gl@~9.0.0/" + "dist.min.js";
         const link2 = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.js";
         const cssLink = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.css";
 
-        // CSS-Datei dynamisch in den Header laden
         const style = document.createElement('link');
         style.rel = 'stylesheet';
         style.href = cssLink;
         document.head.appendChild(style);
 
-        // JavaScript-Dateien nacheinander laden
         function loadScript(url, callback) {
           const script = document.createElement('script');
           script.src = url;
@@ -105,8 +94,8 @@
 
         const r = 200, g = 30, b = 0, alpha = 200;
 
-        // Sicher gestückelte URL für eine voll-interaktive Live-Karte
-        const tileUrl = "https://a.basemaps.cartocdn.com" + "/dark_all/{z}/{x}/{y}.png";
+        // Sicher gestückelte URL für die interaktive Live-Karte
+        const tileUrl = "https://cartocdn.com" + "/dark_all/{z}/{x}/{y}.png";
 
         new deck.DeckGL({
           container: container,
@@ -118,16 +107,24 @@
             zoom: 14.5
           },
           layers: [
-            // NEU: Ein echtes interaktives Karten-Layer im JavaScript
+            // Echte, funktionierende Interaktive Karte (deck.gl v9 kompatibel)
             new deck.TileLayer({
               id: 'live-base-map',
               data: tileUrl,
               minZoom: 0,
               maxZoom: 20,
               tileSize: 256,
-              renderSubLayers: props => new deck.BitmapLayer(props)
+              // KORREKTUR: Die geladenen Bilddaten (data) werden explizit an 'image' übergeben
+              renderSubLayers: props => {
+                const {bbox} = props.tile;
+                return new deck.BitmapLayer(props, {
+                  data: null,
+                  image: props.data,
+                  bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
+                });
+              }
             }),
-            // Ihre 3D-Gebäude-Säulen
+            // 3D-Gebäude-Säulen
             new deck.ColumnLayer({
               id: "dortmund-columns",
               data: layerData,
