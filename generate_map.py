@@ -2,37 +2,47 @@ import pydeck as pdk
 import pandas as pd
 import os
 
-# 1. Sicherstellen, dass die CSV-Datei existiert (sonst erstellen wir Testdaten für Dortmund)
 csv_filename = "dortmund_gebaeude.csv"
 
+# 1. Testdaten erzeugen, falls Datei fehlt
 if not os.path.exists(csv_filename):
-    print(f"'{csv_filename}' nicht gefunden. Erstelle automatische Testdaten...")
-    # 4 Gebäude im Dortmunder Zentrum (Nähe Reinoldikirche / U-Turm)
     test_data = {
         'lng': [7.4653, 7.4680, 7.4610, 7.4635],
         'lat': [51.5136, 51.5145, 51.5125, 51.5150],
-        'height': [25, 45, 15, 30] # Gebäudehöhen in Metern
+        'height': [45, 20, 35, 12]
     }
-    df = pd.DataFrame(test_data)
-    df.to_csv(csv_filename, index=False)
+    pd.DataFrame(test_data).to_csv(csv_filename, index=False)
 
-# 2. Reale oder generierte CSV-Daten einlesen
 data = pd.read_csv(csv_filename)
 
-# 3. 3D-Säulen-Ebene definieren (Perfekt für lng/lat-Punktdaten)
-layer = pdk.Layer(
+# ========================================================
+# KORREKTUR: Wir bauen uns die Weltkarte einfach SELBST als Ebene!
+# ========================================================
+background_map_layer = pdk.Layer(
+    "TileLayer",
+    # Die exakte, fehlerfreie Internetadresse für die Carto-Dunkelkarte:
+    "https://cartocdn.com{z}/{x}/{y}.png",
+    id="base-map-tiles",
+    get_tile_data="@@url", # Sagt deck.gl, dass es die obige URL laden soll
+    min_zoom=0,
+    max_zoom=20,
+    tile_size=256,
+)
+
+# 2. Ihre 3D-Gebäude-Ebene
+building_layer = pdk.Layer(
     "ColumnLayer",
     data,
-    get_position="[lng, lat]",     # Extrahiert Längengrad und Breitengrad
-    get_elevation="height",         # Nutzt die Spalte 'height' für die 3D-Höhe
-    get_fill_color="[200, 30, 0, 160]", # Rötliche, leicht transparente Blöcke
-    radius=25,                      # Breite/Radius der 3D-Blöcke in Metern
+    get_position="[lng, lat]",
+    get_elevation="height",
+    get_fill_color="[200, 30, 0, 160]",
+    radius=25,
     elevation_scale=1,
-    extruded=True,                  # Aktiviert den 3D-Effekt
+    extruded=True,
     pickable=True,
 )
 
-# 4. Kartenansicht auf Dortmund zentrieren
+# 3. Kartenansicht
 view_state = pdk.ViewState(
     latitude=51.5136, 
     longitude=7.4653, 
@@ -41,35 +51,15 @@ view_state = pdk.ViewState(
     bearing=10
 )
 
-# 5. Render und Export als HTML-Datei (Korrektur: map_provider hinzugefügt!)
+# 4. Render und Export (Wir schalten den internen Pydeck-Provider komplett AUS)
 r = pdk.Deck(
-    layers=[layer], 
+    # WICHTIG: Die Karte liegt als allererste Ebene UNTER den Gebäuden
+    layers=[background_map_layer, building_layer], 
     initial_view_state=view_state,
-    map_provider="mapbox", # Zwingend erforderlich bei benutzerdefinierten Dict-Styles!
-    map_style={
-        "version": 8,
-        "sources": {
-            "carto-tiles": {
-                "type": "raster",
-                "tiles": [
-                    "https://cartocdn.com{z}/{x}/{y}.png",
-                    "https://cartocdn.com{z}/{x}/{y}.png"
-                ],
-                "tileSize": 256
-            }
-        },
-        "layers": [
-            {
-                "id": "carto-layer",
-                "type": "raster",
-                "source": "carto-tiles",
-                "minzoom": 0,
-                "maxzoom": 20
-            }
-        ]
-    }
+    map_provider=None,  # Schaltet fehlerhafte Pydeck-Automatismen & Mapbox ab!
+    map_style=None      # Deaktiviert interne Styles
 )
 
 output_html = "option4_pydeck.html"
 r.to_html(output_html)
-print(f"Erfolgreich! Die Datei '{output_html}' wurde ohne Token-Zwang generiert.")
+print(f"Erfolgreich! Die Datei '{output_html}' wurde mit eigener Tile-Map exportiert.")

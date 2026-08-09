@@ -50,6 +50,15 @@
   },
   "layers": [
     {
+      "@@type": "TileLayer",
+      "data": "https://cartocdn.com{z}/{x}/{y}.png",
+      "getTileData": "@@=@@url",
+      "id": "base-map-tiles",
+      "maxZoom": 20,
+      "minZoom": 0,
+      "tileSize": 256
+    },
+    {
       "@@type": "ColumnLayer",
       "data": [
         {
@@ -78,34 +87,11 @@
       "getElevation": "@@=height",
       "getFillColor": "@@=[200, 30, 0, 160]",
       "getPosition": "@@=[lng, lat]",
-      "id": "f7674ca2-ede1-4283-8604-6eccd76f775a",
+      "id": "ac650fdd-5dbd-4c10-a564-efbfd8bb786f",
       "pickable": true,
       "radius": 25
     }
   ],
-  "mapProvider": "mapbox",
-  "mapStyle": {
-    "layers": [
-      {
-        "id": "carto-layer",
-        "maxzoom": 20,
-        "minzoom": 0,
-        "source": "carto-tiles",
-        "type": "raster"
-      }
-    ],
-    "sources": {
-      "carto-tiles": {
-        "tileSize": 256,
-        "tiles": [
-          "https://cartocdn.com{z}/{x}/{y}.png",
-          "https://cartocdn.com{z}/{x}/{y}.png"
-        ],
-        "type": "raster"
-      }
-    },
-    "version": 8
-  },
   "views": [
     {
       "@@type": "MapView",
