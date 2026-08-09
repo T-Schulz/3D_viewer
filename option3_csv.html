@@ -32,23 +32,21 @@
                 document.head.appendChild(script);
             }
 
-            // Nacheinander laden
             loadScript(cdn1, function() {
                 loadScript(cdn2, function() {
                     document.getElementById('status').innerText = "Lade CSV-Daten...";
-                    initCSVViewer(); // KORREKTUR: Startet das CSV-Programm
+                    initCSVViewer();
                 });
             });
         })();
 
-        // Das Hauptprogramm startet hier
         function initCSVViewer() {
-            // 1. Three.js Grund-Setup
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x1a1a1a);
 
+            // Kamera weiter hinten positionieren, um das 0-50 Kreuz komplett zu sehen
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.set(150, 150, 150);
+            camera.position.set(80, 80, 100);
 
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -56,18 +54,35 @@
 
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
+            controls.target.set(25, 25, 25); // Fokus auf die Mitte des 50er-Raums legen
             
             // Lichtquellen
             const light = new THREE.DirectionalLight(0xffffff, 1.2);
-            light.position.set(200, 400, 300);
+            light.position.set(100, 200, 100);
             scene.add(light);
             scene.add(new THREE.AmbientLight(0x666666));
 
-            // Hilfsnetz
-            const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x222222);
+            // ==========================================
+            // KOORDINATENKREUZ ERSTELLEN (0 bis 50)
+            // ==========================================
+            function createAxisLine(start, end, colorHex) {
+                const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+                const material = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 3 });
+                scene.add(new THREE.Line(geometry, material));
+            }
+
+            // X-Achse (Rot)
+            createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(50, 0, 0), 0xff3333);
+            // Y-Achse / Höhe (Grün)
+            createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 50, 0), 0x33ff33);
+            // Z-Achse / Tiefe (Blau)
+            createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 50), 0x3333ff);
+
+            // Hilfsnetz am Boden zur besseren Orientierung
+            const gridHelper = new THREE.GridHelper(100, 20, 0x444444, 0x222222);
+            gridHelper.position.set(0, -0.01, 0); // Minimal unter dem Nullpunkt
             scene.add(gridHelper);
 
-            // Render-Schleife läuft ab Sekunde 1
             function animate() {
                 requestAnimationFrame(animate);
                 controls.update();
@@ -75,106 +90,68 @@
             }
             animate();
 
-            // Fallback-Funktion falls daten.csv fehlt (Erzeugt 50 Test-Gebäude)
-            function generateDemoCSV() {
-                console.log("Generiere künstliche CSV-Demodaten...");
-                let csv = "id,x,y,height\n";
-                for (let i = 0; i < 50; i++) {
-                    // Generiere Gebäude in einem 200x200 Meter Raster
-                    const x = Math.random() * 200 - 100;
-                    const y = Math.random() * 200 - 100;
-                    const height = Math.random() * 30 + 5;
-                    csv += `${i},${x},${y},${height}\n`;
-                }
-                return csv;
-            }
-
-            // 2. CSV laden mit automatischem Zeitlimit (Timeout nach 2 Sekunden)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000); // Nach 2 Sek. abbrechen
-
-            fetch('daten.csv', { signal: controller.signal })
+            // 2. CSV laden und parsen
+            fetch('daten.csv')
                 .then(response => {
-                    clearTimeout(timeoutId); // Timeout stoppen, da Datei reagiert hat
-                    if (!response.ok) throw new Error("CSV-Datei nicht auf Server gefunden");
+                    if (!response.ok) throw new Error("CSV nicht gefunden");
                     return response.text();
                 })
-                .then(csvText => {
-                    parseAndRenderCSV(csvText);
-                })
+                .then(csvText => { parseAndRenderCSV(csvText); })
                 .catch(err => {
-                    clearTimeout(timeoutId);
-                    console.warn("CSV konnte nicht zeitnah geladen werden. Nutze lokale Demodaten.", err);
-                    document.getElementById('status').innerText = "Demodaten aktiv (daten.csv reagiert nicht)";
-                    const demoCSV = generateDemoCSV();
-                    parseAndRenderCSV(demoCSV);
+                    document.getElementById('status').innerText = "Demodaten aktiv (Echte CSV fehlt)";
+                    // Ihre exakten Realdaten als Direkt-Fallback eingetragen:
+                    const realFallbackData = "id,x,y,height\n1,0,0,12\n2,20,5,25\n3,-15,30,8\n4,40,-10,18";
+                    parseAndRenderCSV(realFallbackData);
                 });
 
             function parseAndRenderCSV(text) {
                 const lines = text.split('\n');
                 let baseLinesCount = 0;
 
-                const material = new THREE.MeshLambertMaterial({ color: 0x00a8ff });
-
-                // Mathematische Schwerpunktberechnung für alle CSV-Koordinaten
-                let parsedPoints = [];
-                let sumX = 0, sumY = 0;
+                const buildingMaterial = new THREE.MeshLambertMaterial({ color: 0x00a8ff, transparent: true, opacity: 0.85 });
+                const anchorMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Rote Kugel
 
                 for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
 
                     const values = line.split(',');
-                    
-                    // KORREKTUR: Die Spalten-Indizes aus der CSV-Zeile sauber auslesen
-                    const x = parseFloat(values[1]);      // Spalte 2: X-Koordinate
-                    const y = parseFloat(values[2]);      // Spalte 3: Y-Koordinate
-                    const height = parseFloat(values[3]); // Spalte 4: Höhe
+                    const x = parseFloat(values[1]);
+                    const y = parseFloat(values[2]);
+                    const height = parseFloat(values[3]);
 
                     if (isNaN(x) || isNaN(y) || isNaN(height)) continue;
 
-                    parsedPoints.push({ x, y, height });
-                    sumX += x;
-                    sumY += y;
-                }
+                    // Blockgröße definieren (Breite und Tiefe fest auf 12 Einheiten)
+                    const blockWidth = 12;
+                    const blockDepth = 12;
 
-                if (parsedPoints.length === 0) {
-                    document.getElementById('status').innerText = "Fehler: Keine gültigen Daten in CSV!";
-                    return;
-                }
-
-                // Der exakte Mittelpunkt aller 4 Punkte aus Ihrer CSV-Datei
-                const offsetX = sumX / parsedPoints.length;
-                const offsetY = sumY / parsedPoints.length;
-
-                // Gebäude rendern
-                parsedPoints.forEach(p => {
-                    // Zentrierte Koordinaten berechnen (Verschiebung in den Nullpunkt)
-                    const localX = p.x - offsetX;
-                    const localZ = p.y - offsetY; 
-
-                    // 3D-Klotz bauen (Breite: 12m, Tiefe: 12m, Höhe aus CSV)
-                    const geometry = new THREE.BoxGeometry(12, p.height, 12);
-                    geometry.translate(0, p.height / 2, 0); // Fußpunkt auf das Gitternetz setzen
-
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.set(localX, 0, localZ);
+                    const geometry = new THREE.BoxGeometry(blockWidth, height, blockDepth);
                     
+                    // KORREKTUR DER ANKERKANTE:
+                    // Wir verschieben die Geometrie so, dass der mathematische Nullpunkt (0,0,0) des Objekts
+                    // an der vorderen, linken, unteren Ecke (Kante) sitzt, statt in der Blockmitfe.
+                    geometry.translate(blockWidth / 2, height / 2, blockDepth / 2);
+
+                    const mesh = new THREE.Mesh(geometry, buildingMaterial);
+                    
+                    // In Three.js entspricht CSV-Y der Raum-Tiefe (Z-Achse)
+                    // Wir setzen die exakten Rohdaten ohne Verschiebung ein
+                    mesh.position.set(x, 0, y);
                     scene.add(mesh);
+
+                    // ROTER ANKERPUNKT: Eine kleine Kugel exakt auf der CSV-Koordinate plotten
+                    const sphereGeo = new THREE.SphereGeometry(1, 16, 16);
+                    const markerMesh = new THREE.Mesh(sphereGeo, anchorMaterial);
+                    markerMesh.position.set(x, 0, y);
+                    scene.add(markerMesh);
+
                     baseLinesCount++;
-                });
-
-                // Kamera automatisch auf die Gruppe der 4 Gebäude ausrichten
-                camera.position.set(60, 60, 60);
-                controls.target.set(0, 0, 0);
-                controls.update();
-
-                if(!document.getElementById('status').innerText.includes("Demodaten")) {
-                    document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
                 }
+
+                document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
             }
 
-            // Fenstergröße anpassen
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
