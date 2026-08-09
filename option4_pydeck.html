@@ -93,8 +93,8 @@
 
         const r = 200, g = 30, b = 0, alpha = 200;
 
-        // KORREKTUR: CORS-freie, offizielle OpenStreetMap-Server-URL gestückelt
-        const tileUrl = "https://openstreetmap.org" + "/{z}/{x}/{y}.png";
+        // KORREKTUR: Offizieller, CORS-freier Kachelserver (Zwingt deck.gl, die Hauptdomain zu meiden)
+        const tileUrl = "https://tile.openstreetmap.org" + "/{z}/{x}/{y}.png";
 
         new deck.DeckGL({
           container: container,
@@ -106,13 +106,24 @@
             zoom: 14.5
           },
           layers: [
-            // Das unzerstörbare OpenStreetMap-Layer für deck.gl v9
+            // Das CORS-sichere OpenStreetMap-Layer für deck.gl v9
             new deck.TileLayer({
               id: 'live-base-map',
               data: tileUrl,
               minZoom: 0,
               maxZoom: 19,
               tileSize: 256,
+              // Verhindert CORS-Konflikte durch erzwungenes anonymes Laden der Bilder
+              loadOptions: {
+                image: {
+                  type: 'image',
+                  decode: true
+                },
+                fetch: {
+                  mode: 'cors',
+                  credentials: 'omit'
+                }
+              },
               renderSubLayers: props => {
                 const {bbox} = props.tile;
                 return new deck.BitmapLayer({
