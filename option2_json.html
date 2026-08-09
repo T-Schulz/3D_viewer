@@ -117,17 +117,37 @@
                     side: THREE.DoubleSide
                 });
 
-                let offsetX = 0, offsetY = 0, offsetZ = 0;
-                
-                if (data.transform) {
-                    offsetX = data.transform.translate[0];
-                    offsetY = data.transform.translate[1];
-                    offsetZ = data.transform.translate[2];
-                } else if (vertices.length > 0) {
-                    offsetX = vertices[0][0];
-                    offsetY = vertices[0][1];
-                    offsetZ = vertices[0][2];
-                }
+                // Echte CityJSON-Skalierung auslesen (wichtig für die korrekte Größe)
+                const scaleX = data.transform && data.transform.scale ? data.transform.scale[0] : 1;
+                const scaleY = data.transform && data.transform.scale ? data.transform.scale[1] : 1;
+                const scaleZ = data.transform && data.transform.scale ? data.transform.scale[2] : 1;
+
+                // Automatische Berechnung des echten Mittelpunkts aller Gebäude
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
+
+                vertices.forEach(v => {
+                    const x = v[0] * scaleX;
+                    const y = v[1] * scaleY;
+                    const z = v[2] * scaleZ;
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+                });
+
+                // Mathematischer Schwerpunkt der Dortmunder Kachel
+                const offsetX = (minX + maxX) / 2;
+                const offsetY = (minY + maxY) / 2;
+                const offsetZ = (minZ + maxZ) / 2;
+
+                // Kamera automatisch auf die passende Höhe zurückfahren
+                const deltaX = maxX - minX;
+                const deltaY = maxY - minY;
+                const maxDim = Math.max(deltaX, deltaY);
+                camera.position.set(maxDim, maxDim * 1.2, maxDim);
+                controls.target.set(0, 0, 0);
+                controls.update();
 
                 let buildingCount = 0;
 
@@ -150,9 +170,22 @@
                                 const idx1 = actualRing[i];
                                 const idx2 = actualRing[i + 1];
 
-                                positions.push(vertices[idx0][0] - offsetX, vertices[idx0][2] - offsetZ, -(vertices[idx0][1] - offsetY));
-                                positions.push(vertices[idx1][0] - offsetX, vertices[idx1][2] - offsetZ, -(vertices[idx1][1] - offsetY));
-                                positions.push(vertices[idx2][0] - offsetX, vertices[idx2][2] - offsetZ, -(vertices[idx2][1] - offsetY));
+                                // Umrechnung mit Skalierung und zentriertem Offset
+                                positions.push(
+                                    (vertices[idx0][0] * scaleX) - offsetX, 
+                                    (vertices[idx0][2] * scaleZ) - offsetZ, 
+                                    -((vertices[idx0][1] * scaleY) - offsetY)
+                                );
+                                positions.push(
+                                    (vertices[idx1][0] * scaleX) - offsetX, 
+                                    (vertices[idx1][2] * scaleZ) - offsetZ, 
+                                    -((vertices[idx1][1] * scaleY) - offsetY)
+                                );
+                                positions.push(
+                                    (vertices[idx2][0] * scaleX) - offsetX, 
+                                    (vertices[idx2][2] * scaleZ) - offsetZ, 
+                                    -((vertices[idx2][1] * scaleY) - offsetY)
+                                );
                             }
 
                             if (positions.length > 0) {
@@ -170,7 +203,7 @@
                 if(!document.getElementById('status').innerText.includes("Demodaten")) {
                     document.getElementById('status').innerText = `${buildingCount} CityJSON Gebäude erfolgreich geladen.`;
                 }
-            }
+                }
 
             // Fenstergröße anpassen
             window.addEventListener('resize', () => {
