@@ -78,13 +78,34 @@
       "getElevation": "@@=height",
       "getFillColor": "@@=[200, 30, 0, 160]",
       "getPosition": "@@=[lng, lat]",
-      "id": "68d9cdd4-482c-45b8-918d-75c6f0d37ec8",
+      "id": "f7674ca2-ede1-4283-8604-6eccd76f775a",
       "pickable": true,
       "radius": 25
     }
   ],
-  "mapProvider": "carto",
-  "mapStyle": "carto-dark",
+  "mapProvider": "mapbox",
+  "mapStyle": {
+    "layers": [
+      {
+        "id": "carto-layer",
+        "maxzoom": 20,
+        "minzoom": 0,
+        "source": "carto-tiles",
+        "type": "raster"
+      }
+    ],
+    "sources": {
+      "carto-tiles": {
+        "tileSize": 256,
+        "tiles": [
+          "https://cartocdn.com{z}/{x}/{y}.png",
+          "https://cartocdn.com{z}/{x}/{y}.png"
+        ],
+        "type": "raster"
+      }
+    },
+    "version": 8
+  },
   "views": [
     {
       "@@type": "MapView",

@@ -41,13 +41,35 @@ view_state = pdk.ViewState(
     bearing=10
 )
 
-# 5. Render und Export als HTML-Datei (Mit sicherem Text-String statt Modul-Konstante)
+# 5. Render und Export als HTML-Datei (Korrektur: map_provider hinzugefügt!)
 r = pdk.Deck(
     layers=[layer], 
     initial_view_state=view_state,
-    map_style="carto-dark" # KORREKTUR: Einfacher String funktioniert immer tokenfrei!
+    map_provider="mapbox", # Zwingend erforderlich bei benutzerdefinierten Dict-Styles!
+    map_style={
+        "version": 8,
+        "sources": {
+            "carto-tiles": {
+                "type": "raster",
+                "tiles": [
+                    "https://cartocdn.com{z}/{x}/{y}.png",
+                    "https://cartocdn.com{z}/{x}/{y}.png"
+                ],
+                "tileSize": 256
+            }
+        },
+        "layers": [
+            {
+                "id": "carto-layer",
+                "type": "raster",
+                "source": "carto-tiles",
+                "minzoom": 0,
+                "maxzoom": 20
+            }
+        ]
+    }
 )
 
 output_html = "option4_pydeck.html"
 r.to_html(output_html)
-print(f"Erfolgreich! Die Datei '{output_html}' wurde erstellt.")
+print(f"Erfolgreich! Die Datei '{output_html}' wurde ohne Token-Zwang generiert.")
