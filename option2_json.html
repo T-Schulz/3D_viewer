@@ -23,7 +23,7 @@
         (function() {
             // Teile die Links in sichere Teilstrings auf
             const cdn1 = "https://cdnjs.cloudflare.com" + "/ajax/libs/three.js/r128/" + "three.min.js";
-            const cdn2 = "https://cdn.jsdelivr.net" + "/three@0.128.0/examples/js/controls/" + "OrbitControls.js";
+            const cdn2 = "https://cdn.jsdelivr.net" + "/npm/three@0.128.0/examples/js/controls/" + "OrbitControls.js";
 
             function loadScript(url, callback) {
                 const script = document.createElement('script');
@@ -67,7 +67,7 @@
             const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x333333);
             scene.add(gridHelper);
 
-            // Render-Schleife (Wichtig: Läuft ab Start, damit das Bild nicht einfriert)
+            // Render-Schleife
             function animate() {
                 requestAnimationFrame(animate);
                 controls.update();
@@ -75,7 +75,7 @@
             }
             animate();
 
-            // Funktion zur Generierung von CityJSON-Demodaten im Speicher (Fallback)
+            // Funktion zur Generierung von CityJSON-Demodaten im Speicher (KORRIGIERT)
             function generateDemoCityJSON() {
                 console.log("Generiere künstliche CityJSON-Demodaten...");
                 return {
@@ -137,12 +137,9 @@
 
                     obj.geometry.forEach(geom => {
                         const boundaries = geom.boundaries;
-                        
-                        // Tief verschachtelte Arrays in CityJSON glätten (Solid vs MultiSurface)
                         const flatBoundaries = geom.type === "Solid" ? boundaries[0] : boundaries;
 
                         flatBoundaries.forEach(ring => {
-                            // Unterstützung für verschachtelte Ringe (Außenring extrahieren)
                             const actualRing = Array.isArray(ring[0]) ? ring[0] : ring;
                             
                             const geometry = new THREE.BufferGeometry();
