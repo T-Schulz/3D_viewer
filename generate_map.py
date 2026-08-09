@@ -16,14 +16,13 @@ if not os.path.exists(csv_filename):
 data = pd.read_csv(csv_filename)
 
 # ========================================================
-# KORREKTUR: Wir bauen uns die Weltkarte einfach SELBST als Ebene!
+# REPARATUR: get_tile_data gelöscht, um Parser-Absturz zu verhindern!
 # ========================================================
 background_map_layer = pdk.Layer(
     "TileLayer",
-    # Die exakte, fehlerfreie Internetadresse für die Carto-Dunkelkarte:
+    # Die exakte Adresse für die Carto-Dunkelkarte
     "https://cartocdn.com{z}/{x}/{y}.png",
     id="base-map-tiles",
-    get_tile_data="@@url", # Sagt deck.gl, dass es die obige URL laden soll
     min_zoom=0,
     max_zoom=20,
     tile_size=256,
