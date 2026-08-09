@@ -89,18 +89,23 @@
                 return csv;
             }
 
-            // 2. CSV laden und parsen
-            fetch('daten.csv')
+            // 2. CSV laden mit automatischem Zeitlimit (Timeout nach 2 Sekunden)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // Nach 2 Sek. abbrechen
+
+            fetch('daten.csv', { signal: controller.signal })
                 .then(response => {
-                    if (!response.ok) throw new Error("CSV-Datei nicht gefunden");
+                    clearTimeout(timeoutId); // Timeout stoppen, da Datei reagiert hat
+                    if (!response.ok) throw new Error("CSV-Datei nicht auf Server gefunden");
                     return response.text();
                 })
                 .then(csvText => {
                     parseAndRenderCSV(csvText);
                 })
                 .catch(err => {
-                    console.warn("Echte CSV nicht gefunden. Nutze lokale Demodaten.");
-                    document.getElementById('status').innerText = "Demodaten aktiv (daten.csv fehlt)";
+                    clearTimeout(timeoutId);
+                    console.warn("CSV konnte nicht zeitnah geladen werden. Nutze lokale Demodaten.", err);
+                    document.getElementById('status').innerText = "Demodaten aktiv (daten.csv reagiert nicht)";
                     const demoCSV = generateDemoCSV();
                     parseAndRenderCSV(demoCSV);
                 });
