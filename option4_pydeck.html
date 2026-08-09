@@ -1,61 +1,108 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>3D Stadtmodell Dortmund Viewer</title>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>pydeck</title>
+        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.14.0/dist/maplibre-gl.css" />
+    <script src='https://cdn.jsdelivr.net/npm/@deck.gl/jupyter-widget@~9.3.*/dist/index.js'></script>
+    <link rel="stylesheet" href=https://cdn.jsdelivr.net/npm/@deck.gl/widgets@~9.3.*/dist/stylesheet.css />
     <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { width: 100vw; height: 100vh; display: block; }
+    body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#deck-container {
+  width: 100vw;
+  height: 100vh;
+}
+
+#deck-container canvas {
+  z-index: 1;
+  background: none;
+}
+
+#deck-container .error_text {
+  color: red;
+  background: none;
+  position: absolute;
+  z-index: 100;
+}
     </style>
-</head>
-<body>
-
-    <!-- Three.js und OrbitControls für die Kamera-Steuerung laden -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
-
-    <script>
-        // 1. Szene, Kamera und Renderer aufsetzen
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xeeeeee);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 50, 100);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // 2. Steuerung und Licht hinzufügen
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(1, 1, 1).normalize();
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
-
-        // 3. 3D-Stadtmodell laden (hier als konvertierte .gltf/.glb Datei)
-        const loader = new THREE.GLTFLoader();
-        loader.load('dortmund_kachel.glb', function (gltf) {
-            scene.add(gltf.scene);
-            animate();
-        }, undefined, function (error) {
-            console.error('Fehler beim Laden des Modells:', error);
-        });
-
-        // 4. Render-Schleife
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+  </head>
+  <body>
+    <div id="deck-container">
+    </div>
+  </body>
+  <script>
+    const container = document.getElementById('deck-container');
+    const jsonInput = {
+  "initialViewState": {
+    "bearing": 10,
+    "latitude": 51.5136,
+    "longitude": 7.4653,
+    "pitch": 45,
+    "zoom": 14.5
+  },
+  "layers": [
+    {
+      "@@type": "ColumnLayer",
+      "data": [
+        {
+          "height": 25,
+          "lat": 51.5136,
+          "lng": 7.4653
+        },
+        {
+          "height": 45,
+          "lat": 51.5145,
+          "lng": 7.468
+        },
+        {
+          "height": 15,
+          "lat": 51.5125,
+          "lng": 7.461
+        },
+        {
+          "height": 30,
+          "lat": 51.515,
+          "lng": 7.4635
         }
+      ],
+      "elevationScale": 1,
+      "extruded": true,
+      "getElevation": "@@=height",
+      "getFillColor": "@@=[200, 30, 0, 160]",
+      "getPosition": "@@=[lng, lat]",
+      "id": "68d9cdd4-482c-45b8-918d-75c6f0d37ec8",
+      "pickable": true,
+      "radius": 25
+    }
+  ],
+  "mapProvider": "carto",
+  "mapStyle": "carto-dark",
+  "views": [
+    {
+      "@@type": "MapView",
+      "controller": true
+    }
+  ]
+};
+    const tooltip = true;
+    const customLibraries = null;
+    const configuration = null;
 
-        // Browser-Resizing abfangen
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
+    const deckInstance = createDeck({
+                  container,
+      jsonInput,
+      tooltip,
+      customLibraries,
+      configuration,
+          });
+
+  </script>
 </html>
