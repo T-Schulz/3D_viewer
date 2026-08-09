@@ -18,113 +18,157 @@
         <p id="status">Lade CSV-Daten...</p>
     </div>
 
-    <!-- Three.js Bibliotheken laden -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://jsdelivr.net"></script>
-
+    <!-- Dynamischer Skript-Lader gegen Übertragungsfehler -->
     <script>
-        // 1. Three.js Grund-Setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a); // Dunkler Hintergrund für besseren Kontrast
+        (function() {
+            // Teile die Links in sichere Teilstrings auf
+            const cdn1 = "https://cdnjs.cloudflare.com" + "/ajax/libs/three.js/r128/" + "three.min.js";
+            const cdn2 = "https://cdn.jsdelivr.net" + "/npm/three@0.128.0/examples/js/controls/" + "OrbitControls.js";
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(100, 100, 100);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        
-        // Lichtquellen hinzufügen
-        const light = new THREE.DirectionalLight(0xffffff, 1.2);
-        light.position.set(200, 400, 300);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x666666));
-
-        // Hilfsnetz am Boden zeichnen
-        const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x222222);
-        scene.add(gridHelper);
-
-        // 2. CSV laden und parsen
-        fetch('daten.csv')
-            .then(response => response.text())
-            .then(csvText => {
-                parseAndRenderCSV(csvText);
-            })
-            .catch(err => {
-                document.getElementById('status').innerText = "Fehler beim Laden der CSV!";
-                console.error(err);
-            });
-
-        function parseAndRenderCSV(text) {
-            const lines = text.split('\n');
-            let baseLinesCount = 0;
-
-            // Erste Zeile sind die Header (id, x, y, height)
-            const headers = lines[0].split(',');
-
-            // Offsets, um das Modell im Ursprung (0,0,0) zu zentrieren
-            let offsetX = 0;
-            let offsetY = 0;
-            let firstPoint = true;
-
-            // Standard-Material für die Gebäude
-            const material = new THREE.MeshLambertMaterial({ color: 0x00a8ff });
-
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue; // Leere Zeilen überspringen
-
-                const values = line.split(',');
-                const x = parseFloat(values[1]);
-                const y = parseFloat(values[2]);
-                const height = parseFloat(values[3]);
-
-                if (isNaN(x) || isNaN(y) || isNaN(height)) continue;
-
-                // Beim ersten Gebäude setzen wir den Nullpunkt fest
-                if (firstPoint) {
-                    offsetX = x;
-                    offsetY = y;
-                    firstPoint = false;
-                }
-
-                // Lokale Koordinaten berechnen (Zentrierung)
-                const localX = x - offsetX;
-                const localZ = y - offsetY; // In Three.js ist Z die Tiefe (horizontal) und Y die Höhe (vertikal)
-
-                // 3D-Klotz (Box) für das Gebäude erstellen
-                // Breite: 10m, Tiefe: 10m (als Platzhalter für die Grundfläche), Höhe aus CSV
-                const geometry = new THREE.BoxGeometry(10, height, 10);
-                
-                // Den Drehpunkt der Box an die Unterseite verschieben, damit sie auf dem Boden steht
-                geometry.translate(0, height / 2, 0);
-
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(localX, 0, localZ);
-                
-                scene.add(mesh);
-                baseLinesCount++;
+            function loadScript(url, callback) {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = callback;
+                document.head.appendChild(script);
             }
 
-            document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
-            animate();
-        }
+            // Nacheinander laden
+            loadScript(cdn1, function() {
+                loadScript(cdn2, function() {
+                    document.getElementById('status').innerText = "Lade CSV-Daten...";
+                    initCSVViewer(); // KORREKTUR: Startet das CSV-Programm
+                });
+            });
+        })();
 
-        // 3. Render-Schleife
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
+        // Das Hauptprogramm startet hier
+        function initCSVViewer() {
+            // 1. Three.js Grund-Setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
 
-        // Fenstergröße anpassen
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(150, 150, 150);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            document.body.appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            
+            // Lichtquellen
+            const light = new THREE.DirectionalLight(0xffffff, 1.2);
+            light.position.set(200, 400, 300);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x666666));
+
+            // Hilfsnetz
+            const gridHelper = new THREE.GridHelper(500, 50, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Render-Schleife läuft ab Sekunde 1
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Fallback-Funktion falls daten.csv fehlt (Erzeugt 50 Test-Gebäude)
+            function generateDemoCSV() {
+                console.log("Generiere künstliche CSV-Demodaten...");
+                let csv = "id,x,y,height\n";
+                for (let i = 0; i < 50; i++) {
+                    // Generiere Gebäude in einem 200x200 Meter Raster
+                    const x = Math.random() * 200 - 100;
+                    const y = Math.random() * 200 - 100;
+                    const height = Math.random() * 30 + 5;
+                    csv += `${i},${x},${y},${height}\n`;
+                }
+                return csv;
+            }
+
+            // 2. CSV laden und parsen
+            fetch('daten.csv')
+                .then(response => {
+                    if (!response.ok) throw new Error("CSV-Datei nicht gefunden");
+                    return response.text();
+                })
+                .then(csvText => {
+                    parseAndRenderCSV(csvText);
+                })
+                .catch(err => {
+                    console.warn("Echte CSV nicht gefunden. Nutze lokale Demodaten.");
+                    document.getElementById('status').innerText = "Demodaten aktiv (daten.csv fehlt)";
+                    const demoCSV = generateDemoCSV();
+                    parseAndRenderCSV(demoCSV);
+                });
+
+            function parseAndRenderCSV(text) {
+                const lines = text.split('\n');
+                let baseLinesCount = 0;
+
+                const material = new THREE.MeshLambertMaterial({ color: 0x00a8ff });
+
+                // Mathematische Schwerpunktberechnung für alle CSV-Koordinaten
+                let parsedPoints = [];
+                let sumX = 0, sumY = 0;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const values = line.split(',');
+                    const x = parseFloat(values[1]);
+                    const y = parseFloat(values[2]);
+                    const height = parseFloat(values[3]);
+
+                    if (isNaN(x) || isNaN(y) || isNaN(height)) continue;
+
+                    parsedPoints.push({ x, y, height });
+                    sumX += x;
+                    sumY += y;
+                }
+
+                if (parsedPoints.length === 0) {
+                    document.getElementById('status').innerText = "Fehler: Keine gültigen Daten in CSV!";
+                    return;
+                }
+
+                // Der exakte Mittelpunkt aller Punkte aus der Excel/CSV-Tabelle
+                const offsetX = sumX / parsedPoints.length;
+                const offsetY = sumY / parsedPoints.length;
+
+                // Gebäude rendern
+                parsedPoints.forEach(p => {
+                    // Zentrierte Koordinaten berechnen
+                    const localX = p.x - offsetX;
+                    const localZ = p.y - offsetY; 
+
+                    // 3D-Klotz bauen (Breite: 12m, Tiefe: 12m, Höhe aus CSV)
+                    const geometry = new THREE.BoxGeometry(12, p.height, 12);
+                    geometry.translate(0, p.height / 2, 0); // Fußpunkt auf den Boden setzen
+
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(localX, 0, localZ);
+                    
+                    scene.add(mesh);
+                    baseLinesCount++;
+                });
+
+                if(!document.getElementById('status').innerText.includes("Demodaten")) {
+                    document.getElementById('status').innerText = `${baseLinesCount} Gebäude aus CSV gerendert.`;
+                }
+            }
+
+            // Fenstergröße anpassen
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
     </script>
 </body>
 </html>
