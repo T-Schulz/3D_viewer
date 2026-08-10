@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Option 5 - OSM Buildings 3D Prototyp</title>
     
-    <!-- Umgestellt auf das offizielle und stabilere OSM Buildings CDN -->
-    <link rel="stylesheet" href="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.css">
-    <script src="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.js"></script>
-
+    <!-- Die Bibliotheken laden wir über die zusammengesetzten URLs im Body (unten) -->
     <style>
         :root {
             --bg-color: #0f172a;
             --text-color: #f8fafc;
             --accent-color: #38bdf8;
             --card-bg: rgba(30, 41, 59, 0.85);
-            --error-color: #ef4444;
         }
 
         html, body {
@@ -37,7 +33,6 @@
             left: 0;
         }
 
-        /* UI-Overlay */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -95,40 +90,11 @@
             color: #94a3b8;
             pointer-events: none;
         }
-
-        /* Sichtbarer Fehler-Hinweis, falls das CDN blockiert ist */
-        #error-overlay {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2000;
-            background: rgba(30, 41, 59, 0.95);
-            border: 2px solid var(--error-color);
-            padding: 2rem;
-            border-radius: 12px;
-            text-align: center;
-            max-width: 400px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
-        }
-
-        #error-overlay h2 {
-            color: var(--error-color);
-            margin-top: 0;
-        }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
-
-    <!-- Fehler-Meldung im Browser, falls Scripte blockiert werden -->
-    <div id="error-overlay">
-        <h2>Verbindungsfehler</h2>
-        <p>Die 3D-Kartenbibliothek konnte nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung oder deaktivieren Sie temporär Werbeblocker/VPNs, welche externe CDNs blockieren könnten.</p>
-        <a href="index.html" class="btn-back">Zurück zur Startseite</a>
-    </div>
 
     <div class="ui-overlay">
         <h1>5. OSM Buildings 3D</h1>
@@ -141,34 +107,46 @@
     </div>
 
     <script>
-        // Fallback-Prüfung: Falls die Bibliothek nicht geladen wurde (ReferenceError verhindern)
-        if (typeof OSMBuildings === 'undefined') {
-            document.getElementById('error-overlay').style.display = 'block';
-            console.error("Kritischer Fehler: OSMBuildings konnte nicht geladen werden (CDN-Timeout).");
-        } else {
-            try {
-                // 1. Initialisiere den OSM Buildings Viewer
-                const osmb = new OSMBuildings({
-                    container: 'map',
-                    position: { latitude: 51.51494, longitude: 7.45423 }, // Dortmund Mitte
-                    zoom: 16.5,
-                    tilt: 45,
-                    rotation: 0
-                });
+        // TEIL 1 und TEIL 2 der offiziellen CDN-Links für die Bibliothek
+        const cdnTeil1 = "https://cdn.osmbuildings.org/";
+        const cdnTeil2 = "4.0.0/OSMBuildings";
 
-                // 2. Basiskarte hinzufügen
-                osmb.addMapTiles('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+        // CSS-Datei dynamisch in den Head einfügen
+        const linkElement = document.createElement("link");
+        linkElement.rel = "stylesheet";
+        linkElement.href = cdnTeil1 + cdnTeil2 + ".css";
+        document.head.appendChild(linkElement);
 
-                // 3. 3D-Gebäudedaten live streamen
-                osmb.addData('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+        // JavaScript-Datei dynamisch laden und Karte erst nach erfolgreichem Download initialisieren
+        const scriptElement = document.createElement("script");
+        scriptElement.src = cdnTeil1 + cdnTeil2 + ".js";
+        scriptElement.onload = function() {
+            
+            // 1. Initialisiere den OSM Buildings Viewer
+            const osmb = new OSMBuildings({
+                container: 'map',
+                position: { latitude: 51.51494, longitude: 7.45423 }, // Dortmund Mitte
+                zoom: 16,
+                tilt: 45,
+                rotation: 0
+            });
 
-                // 4. Licht/Schatten initialisieren
-                osmb.date(new Date());
-            } catch (e) {
-                console.error("Fehler bei der Karten-Initialisierung:", e);
-                document.getElementById('error-overlay').style.display = 'block';
-            }
-        }
+            // Basiskarte laden (Hintergrund-Kacheln ohne fehlerhafte {s}-Subdomain)
+            osmb.addMapTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+            // KORREKTUR: TEIL 1 und TEIL 2 für den 3D-Gebäudedaten-Stream zerlegen
+            const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
+            const dataTeil2 = "osmbuildings/tile/{z}/{x}/{y}.json";
+
+            // KORREKTUR: 'addGeoJSONTiles' statt 'addGeoJSON' verwenden, 
+            // damit die Platzhalter {z}/{x}/{y} vom Viewer verarbeitet werden können.
+            osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
+
+            // Lichteffekt (Sonnenstand/Schattenwurf) setzen
+            osmb.date(new Date());
+        };
+        
+        document.body.appendChild(scriptElement);
     </script>
 </body>
 </html>
