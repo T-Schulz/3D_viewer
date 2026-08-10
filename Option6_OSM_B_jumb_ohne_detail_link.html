@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Option 6 - OSM 3D Prototyp + Interaktiv Pro</title>
+    <title>Option 6 - OSM Buildings 3D Prototyp + Interaktiv</title>
     
-    <!-- Die modernen deck.gl und MapLibre Bibliotheken aus Option 4 -->
-    <script src="https://unpkg.com/deck.gl@~9.0.0/dist.min.js"></script>
-    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+    <!-- Statische CDN-Einbindungen im Head (sauber ohne losen Text) -->
+    <link rel="stylesheet" href="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.css">
+    <script src="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.js"></script>
 
     <style>
         :root {
@@ -31,8 +30,7 @@
             color: var(--text-color);
         }
 
-        /* Der Kartencontainer für deck.gl */
-        #deck-container {
+        #map {
             width: 100%;
             height: 100%;
             position: absolute;
@@ -40,7 +38,6 @@
             left: 0;
         }
 
-        /* Erweitertes UI-Overlay aus Option 6 */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -68,7 +65,7 @@
         .btn-control {
             background-color: #334155; color: var(--text-color); border: 1px solid #475569;
             padding: 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
-            font-weight: 500; transition: background-color 0.2s, border-color 0.2s; text-align: center;
+            font-weight: 500; transition: background-color 0.2s; text-align: center;
         }
         .btn-control:hover { background-color: #475569; border-color: var(--accent-color); }
         .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); font-weight: 600; }
@@ -80,7 +77,6 @@
         }
         .btn-back:hover { background-color: #334155; color: var(--text-color); }
 
-        /* Das Info-Unterfenster aus Option 6 */
         .building-popup {
             position: absolute; z-index: 2000; background: #1e293b; border: 2px solid var(--accent-color);
             padding: 1rem; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
@@ -101,13 +97,11 @@
 </head>
 <body>
 
-    <!-- Der deck.gl Container aus Option 4 -->
-    <div id="deck-container"></div>
+    <div id="map"></div>
 
-    <!-- Das Steuerungsmenü aus Option 6 -->
     <div class="ui-overlay">
-        <h1>6. OSM 3D Pro</h1>
-        <p>Interaktiver deck.gl-Viewer mit funktionierender Maus-Interaktion und Jump-Funktion.</p>
+        <h1>6. OSM Buildings Pro</h1>
+        <p>Interaktiver 3D-Viewer mit Koordinatensprüngen, Kameraperspektiven und Autopilot-Modus.</p>
 
         <div class="control-section">
             <h3>Koordinaten-Sprung (Jump)</h3>
@@ -135,7 +129,6 @@
         <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
     </div>
 
-    <!-- Das interaktive Popup aus Option 6 -->
     <div id="popup" class="building-popup">
         <button class="popup-close" onclick="closePopup()">×</button>
         <h4 id="popup-title">Gebäude-Info</h4>
@@ -144,111 +137,118 @@
     </div>
 
     <div class="controls-hint">
-        3D-Säule anklicken für Details | Mausberührung zeigt Reaktion
+        3D-Säule anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
-        <script>
-        // Globale Variablen für Steuerungslogik und Kartenstatus
-        let deckgl;
+    <script>
+        // Globale Variablen für Steuerungslogik
+        let osmb;
         let rotationInterval = null;
-        
-        // Zentraler Kamerastatus (ViewState), den deck.gl benötigt
-        let viewState = {
-            latitude: 51.51494,
-            longitude: 7.45423,
-            zoom: 16,
-            pitch: 45,      // Neigungswinkel (Tilt)
-            bearing: 0,     // Rotationswinkel
-            maxZoom: 19,
-            minZoom: 13
-        };
+        let currentRotation = 0;
+        let currentTilt = 45;
 
-        // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
+        // Datenbank für die 4 Highlight-Gebäude inklusive Beschreibungen
         const highlightBuildings = [
-            { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, height: 75, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
-            { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, height: 60, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
-            { id: 'bvb', name: 'Signal Iduna Park', lat: 51.49259, lon: 7.45184, height: 65, desc: 'Das größte reine Fußballstadion Deutschlands und Heimat von Borussia Dortmund.', url: 'details_bvb.html' },
-            { id: 'tu', name: 'Mathetower (TU Dortmund)', lat: 51.49301, lon: 7.41444, height: 70, desc: 'Das markante Hauptgebäude der Fakultät für Mathematik auf dem Campus Nord.', url: 'details_tu.html' }
+            { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
+            { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
+            { id: 'bvb', name: 'Signal Iduna Park', lat: 51.49259, lon: 7.45184, desc: 'Das größte reine Fußballstadion Deutschlands und Heimat von Borussia Dortmund.', url: 'details_bvb.html' },
+            { id: 'tu', name: 'Mathetower (TU Dortmund)', lat: 51.49301, lon: 7.41444, desc: 'Das markante Hauptgebäude der Fakultät für Mathematik auf dem Campus Nord.', url: 'details_tu.html' }
         ];
 
-        // Farben für die 3D-Säulen definieren (RGBA-Format, passend zu Ihrem Cyan-Design)
-        const r = 56, g = 189, b = 248, alpha = 220; 
-
-        // Startet die App, sobald das Dokument geladen wurde
         window.onload = function() {
-            initDeckGL();
+            // maxZoom auf 19 beschränkt wegen Server-Limits
+            osmb = new OSMBuildings({
+                container: 'map',
+                position: { latitude: 51.51494, longitude: 7.45423 }, 
+                zoom: 16,
+                minZoom: 14,
+                maxZoom: 19 
+            });
+
+            // Geteilte URLs für stabile Kartenkacheln
+            const mapTeil1 = "https://a.tile.openstreetmap.org/";
+            const mapTeil2 = "{z}/{x}/{y}.png";
+            osmb.addMapTiles(mapTeil1 + mapTeil2);
+
+            const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
+            const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
+            osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
+
+            // Platziert die vier 3D-Säulen
+            addNativeGeoJSONDummies();
+
+            // KORREKTUR: Optimierter Klick-Detektor für WebGL-Features
+            osmb.on('click', function(e) {
+                console.log("Klick registriert:", e); // Hilfreich zur Kontrolle in Ihrer Konsole
+                
+                // Wir prüfen alle denkbaren Plätze, an denen die Engine die ID verstecken kann (feature oder id)
+                const clickedId = e.feature || (e.properties ? e.properties.id : null);
+                
+                if (clickedId) {
+                    const found = highlightBuildings.find(b => b.id === clickedId);
+                    if (found) {
+                        // KORREKTUR: Pixel-Koordinaten absolut krisensicher aus allen Engine-Varianten auslesen
+                        let screenX = e.containerX || e.x;
+                        let screenY = e.containerY || e.y;
+                        
+                        // Fallback, falls die Engine die Pixel in e.pixel (v4 Standard) versteckt
+                        if (e.pixel) {
+                            screenX = e.pixel.x;
+                            screenY = e.pixel.y;
+                        }
+
+                        openBuildingPopup(found, screenX, screenY);
+                        return; 
+                    }
+                }
+                
+                // Klick ins Leere schließt das Fenster
+                if (window.event && window.event.target.id === 'map') {
+                    document.getElementById('popup').style.display = 'none';
+                }
+            });
         };
 
-        function initDeckGL() {
-            const container = document.getElementById('deck-container');
-            const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-            deckgl = new deck.DeckGL({
-                container: container,
-                initialViewState: viewState,
-                controller: true, // Erlaubt freies Schwenken, Neigen und Zoomen mit der Maus
+        // KORREKTUR: ID wurde jetzt zusätzlich in die 'properties' geschrieben,
+        // da der Vektor-Shader von OSM Buildings v4 Klicks nur dort auswertet!
+        function addNativeGeoJSONDummies() {
+            highlightBuildings.forEach(b => {
+                const offset = 0.00015; // Größe des Säulen-Quadrats leicht optimiert
                 
-                // Aktualisiert unsere Variablen, wenn der Nutzer die Karte manuell bewegt
-                onViewStateChange: ({viewState: nextViewState}) => {
-                    viewState = nextViewState;
-                    deckgl.setProps({viewState: viewState});
-                    closePopup(); // Schließt das Fenster beim Bewegen der Karte
-                },
-
-                // Ändert den Mauszeiger zu einer Hand, wenn man eine Säule berührt (Hover-Feedback!)
-                onHover: ({object}) => {
-                    container.style.cursor = object ? 'pointer' : 'default';
-                },
-
-                // Baut die Ebenen (Layers) für die Karte auf
-                layers: [
-                    // Ebene 1: Die CORS-sichere 2D-Hintergrundkarte
-                    new deck.TileLayer({
-                        id: 'live-base-map',
-                        data: tileUrl,
-                        minZoom: 0,
-                        maxZoom: 19,
-                        tileSize: 256,
-                        loadOptions: {
-                            image: { type: 'image', decode: true }
+                const geojson = {
+                    type: "FeatureCollection",
+                    features: [{
+                        type: "Feature",
+                        id: b.id, 
+                        properties: {
+                            id: b.id,           // KORREKTUR: ID für den Klick-Shader verdoppelt
+                            height: 75,         // Säulen etwas erhöht (75m), damit sie noch besser auffallen
+                            color: "#38bdf8",   
+                            roofColor: "#0ea5e9"
                         },
-                        renderSubLayers: props => {
-                            const {bbox} = props.tile;
-                            return new deck.BitmapLayer({
-                                id: props.id,
-                                image: props.data,
-                                bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
-                            });
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [[
+                                [b.lon - offset, b.lat - offset],
+                                [b.lon + offset, b.lat - offset],
+                                [b.lon + offset, b.lat + offset],
+                                [b.lon - offset, b.lat + offset],
+                                [b.lon - offset, b.lat - offset]
+                            ]]
                         }
-                    }),
-                    
-                    // Ebene 2: Die interaktiven 3D-Säulen
-                    new deck.ColumnLayer({
-                        id: "dortmund-columns",
-                        data: highlightBuildings,
-                        getPosition: d => [d.lon, d.lat],
-                        getElevation: d => d.height,
-                        getFillColor: [r, g, b, alpha],
-                        radius: 20,                // Radius der Säule in Metern
-                        extruded: true,
-                        pickable: true,            // Aktiviert die Maus-Selektion und Klicks!
-                        onClick: (info) => {
-                            if (info && info.object) {
-                                openBuildingPopup(info.object, info.x, info.y);
-                            }
-                        }
-                    })
-                ]
+                    }]
+                };
+
+                osmb.addGeoJSON(geojson);
             });
         }
 
-        // Funktion zum Positionieren und Befüllen des Infofensters
+        // Funktion zum Öffnen des Infofensters an den Klick-Pixeln
         function openBuildingPopup(building, x, y) {
             const popup = document.getElementById('popup');
             document.getElementById('popup-title').innerText = building.name;
             document.getElementById('popup-desc').innerText = building.desc;
             document.getElementById('popup-link').href = building.url;
 
-            // Platziert das Popup direkt an den Pixeln des Mausklicks
             popup.style.left = (x + 15) + 'px';
             popup.style.top = (y - 50) + 'px';
             popup.style.display = 'block';
@@ -258,23 +258,18 @@
             document.getElementById('popup').style.display = 'none';
         }
 
-        // Steuert den automatischen Koordinaten-Sprung (Jump)
         function jumpTo(lat, lon, buttonId, element) {
-            closePopup();
+            if (!osmb) return;
+            closePopup(); 
             
-            // Setzt die Ziel-Zoomstufe je nach Areal
-            const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
+            osmb.setPosition({ latitude: lat, longitude: lon });
+            
+            if (buttonId === 'bvb' || buttonId === 'tu') {
+                osmb.setZoom(15.5); 
+            } else {
+                osmb.setZoom(17); 
+            }
 
-            // Aktualisiert den Kamerastatus
-            viewState = {
-                ...viewState,
-                latitude: lat,
-                longitude: lon,
-                zoom: targetZoom
-            };
-            deckgl.setProps({viewState: viewState});
-
-            // Schaltet die CSS-Klassen der Buttons im Overlay um
             const buttons = document.querySelectorAll('.btn-group .btn-control');
             buttons.forEach(btn => btn.classList.remove('active'));
             if (element) {
@@ -282,40 +277,29 @@
             }
         }
 
-        // Steuert den Autopiloten (Kamera-Rotation)
         function toggleRotation() {
+            if (!osmb) return;
             const btn = document.getElementById('rotationBtn');
 
             if (rotationInterval) {
-                // Rotation stoppen
                 clearInterval(rotationInterval);
                 rotationInterval = null;
                 btn.classList.remove('active');
                 btn.innerText = "Autopilot: Starten";
             } else {
-                // Rotation starten (Blickwinkel inkrementieren)
                 btn.classList.add('active');
                 btn.innerText = "Autopilot: Stoppen";
                 rotationInterval = setInterval(() => {
-                    viewState = {
-                        ...viewState,
-                        bearing: (viewState.bearing + 0.25) % 360
-                    };
-                    deckgl.setProps({viewState: viewState});
+                    currentRotation = (currentRotation + 0.2) % 360;
+                    osmb.setRotation(currentRotation);
                 }, 40);
             }
         }
 
-        // Steuert den Neigungswinkel (Tilt/Pitch) stufenweise
         function changeTilt(delta) {
-            // Limits von 0 bis 60 Grad beachten (deck.gl Pitch-Maximum liegt standardmäßig bei 60)
-            const nextPitch = Math.max(0, Math.min(60, viewState.pitch + delta));
-            
-            viewState = {
-                ...viewState,
-                pitch: nextPitch
-            };
-            deckgl.setProps({viewState: viewState});
+            if (!osmb) return;
+            currentTilt = Math.max(10, Math.min(85, currentTilt + delta));
+            osmb.setTilt(currentTilt);
         }
     </script>
 </body>
