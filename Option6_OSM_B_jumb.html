@@ -139,7 +139,7 @@
     <div class="controls-hint">
         3D-Säule anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
-        <script>
+    <script>
         // Globale Variablen für Steuerungslogik
         let osmb;
         let rotationInterval = null;
@@ -173,18 +173,29 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // KORREKTUR: Platzieren von nativen GeoJSON-Gebäuden anstelle von Funktionen
-            // Erzeugt kleine quadratische 3D-Türme komplett clientseitig ohne Serverfehler
+            // Platziert die vier 3D-Säulen
             addNativeGeoJSONDummies();
 
-            // Klick-Erkennung für die platzierten 3D-Körper
+            // KORREKTUR: Optimierter Klick-Detektor für WebGL-Features
             osmb.on('click', function(e) {
-                // GeoJSON-Features liefern ihre ID im Feld 'feature' zurück
-                if (e && e.feature) {
-                    const found = highlightBuildings.find(b => b.id === e.feature);
+                console.log("Klick registriert:", e); // Hilfreich zur Kontrolle in Ihrer Konsole
+                
+                // Wir prüfen alle denkbaren Plätze, an denen die Engine die ID verstecken kann (feature oder id)
+                const clickedId = e.feature || (e.properties ? e.properties.id : null);
+                
+                if (clickedId) {
+                    const found = highlightBuildings.find(b => b.id === clickedId);
                     if (found) {
-                        const screenX = e.containerX !== undefined ? e.containerX : e.x;
-                        const screenY = e.containerY !== undefined ? e.containerY : e.y;
+                        // KORREKTUR: Pixel-Koordinaten absolut krisensicher aus allen Engine-Varianten auslesen
+                        let screenX = e.containerX || e.x;
+                        let screenY = e.containerY || e.y;
+                        
+                        // Fallback, falls die Engine die Pixel in e.pixel (v4 Standard) versteckt
+                        if (e.pixel) {
+                            screenX = e.pixel.x;
+                            screenY = e.pixel.y;
+                        }
+
                         openBuildingPopup(found, screenX, screenY);
                         return; 
                     }
@@ -197,21 +208,21 @@
             });
         };
 
-        // KORREKTUR: Nutzt das standardisierte GeoJSON-Format der v4-Engine,
-        // um 3D-Körper volumetrisch ohne Typ-Fehler in den Shader zu zeichnen
+        // KORREKTUR: ID wurde jetzt zusätzlich in die 'properties' geschrieben,
+        // da der Vektor-Shader von OSM Buildings v4 Klicks nur dort auswertet!
         function addNativeGeoJSONDummies() {
             highlightBuildings.forEach(b => {
-                // Wir erzeugen ein kleines Quadrat (ca. 20m) um die Koordinate herum
-                const offset = 0.0001; 
+                const offset = 0.00015; // Größe des Säulen-Quadrats leicht optimiert
                 
                 const geojson = {
                     type: "FeatureCollection",
                     features: [{
                         type: "Feature",
-                        id: b.id, // ID für die e.feature-Klickabfrage
+                        id: b.id, 
                         properties: {
-                            height: 60,         // Höhe in Metern
-                            color: "#38bdf8",   // Neon-Cyan aus Ihrem UI-Design
+                            id: b.id,           // KORREKTUR: ID für den Klick-Shader verdoppelt
+                            height: 75,         // Säulen etwas erhöht (75m), damit sie noch besser auffallen
+                            color: "#38bdf8",   
                             roofColor: "#0ea5e9"
                         },
                         geometry: {
@@ -221,13 +232,12 @@
                                 [b.lon + offset, b.lat - offset],
                                 [b.lon + offset, b.lat + offset],
                                 [b.lon - offset, b.lat + offset],
-                                [b.lon - offset, b.lat - offset] // Polygon schließen
+                                [b.lon - offset, b.lat - offset]
                             ]]
                         }
                     }]
                 };
 
-                // Übergabe an den nativen GeoJSON-Parser der Engine
                 osmb.addGeoJSON(geojson);
             });
         }
