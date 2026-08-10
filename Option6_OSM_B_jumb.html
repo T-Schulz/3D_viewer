@@ -244,14 +244,13 @@
         Gebäude anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
     <script>
-        // Globale Variablen
+        // Globale Variablen für Steuerungslogik
         let osmb;
         let rotationInterval = null;
         let currentRotation = 0;
         let currentTilt = 45;
-        let lastHighlightedId = null; // Speichert das aktuell rot gefärbte Gebäude
 
-        // Datenbank für die 4 Highlight-Gebäude
+        // Datenbank für die 4 Highlight-Gebäude inklusive symbolischem Info-Text
         const highlightBuildings = [
             { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
             { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
@@ -279,27 +278,39 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // Klick-Event-Handler mit korrigierter Pixel-Abfrage (containerX/Y)
+            // NEU: Setzt unübersehbare 3D-Marker auf die Gebäude, sobald die Karte geladen ist
+            addVisualMarkers();
+
+            // Klick-Event-Handler für die Interaktion
             osmb.on('click', function(e) {
-                // Wenn ein Gebäude getroffen wurde, hat das Event eine Feature-ID
-                const buildingId = e.feature; 
-                
-                // Pixel-Koordinaten absolut sicher auslesen (Engine-Wechsel abfangen)
                 const screenX = e.containerX !== undefined ? e.containerX : e.x;
                 const screenY = e.containerY !== undefined ? e.containerY : e.y;
 
                 if (e.lat && e.lon) {
-                    checkBuildingClick(e.lat, e.lon, screenX, screenY, buildingId);
+                    checkBuildingClick(e.lat, e.lon, screenX, screenY);
                 }
             });
         };
 
-        // Funktion zur Erkennung und visuellen Selektion (Rotfärbung)
-        function checkBuildingClick(clickLat, clickLon, screenX, screenY, buildingId) {
-            const threshold = 0.0015; 
+        // NEU: Erzeugt leuchtend rote 3D-Marker-Pins auf den Koordinaten der Gebäude
+        function addVisualMarkers() {
+            highlightBuildings.forEach(b => {
+                // osmb.addMarker platziert ein interaktives 3D-Icon auf der Karte
+                osmb.addMarker({
+                    latitude: b.lat,
+                    longitude: b.lon,
+                    color: '#ef4444', // Kräftiges Signalrot
+                    amplitude: 25     // Höhe des Pins über dem Boden, damit er aus dem Dach ragt
+                });
+            });
+        }
+
+        // Funktion zur Erkennung, ob in die Nähe eines Markers geklickt wurde
+        function checkBuildingClick(clickLat, clickLon, screenX, screenY) {
+            // Suchradius um den Marker herum
+            const threshold = 0.0018; 
             let found = null;
 
-            // 1. Prüfen, ob der Klick geografisch nah an einem unserer POIs war
             for (let b of highlightBuildings) {
                 let d = Math.sqrt(Math.pow(b.lat - clickLat, 2) + Math.pow(b.lon - clickLon, 2));
                 if (d < threshold) {
@@ -308,27 +319,15 @@
                 }
             }
 
-            // 2. Visuelles Feedback: Altes Gebäude entfärben, neues Gebäude rot färben
-            if (lastHighlightedId) {
-                osmb.highlight(lastHighlightedId, null); // Zurücksetzen auf Standardfarbe
-                lastHighlightedId = null;
-            }
-
             const popup = document.getElementById('popup');
             
             if (found) {
-                // Wenn die Engine uns eine Gebäude-ID liefert, färben wir es leuchtend ROT (#ef4444)
-                if (buildingId) {
-                    osmb.highlight(buildingId, '#ef4444');
-                    lastHighlightedId = buildingId; // ID für späteres Zurücksetzen merken
-                }
-
                 // Info-Inhalte in das HTML-Popup schreiben
                 document.getElementById('popup-title').innerText = found.name;
                 document.getElementById('popup-desc').innerText = found.desc;
                 document.getElementById('popup-link').href = found.url;
 
-                // Popup exakt an die korrigierten Maus-Pixel heften
+                // Popup exakt an die Maus-Pixel heften
                 popup.style.left = (screenX + 15) + 'px';
                 popup.style.top = (screenY - 50) + 'px';
                 popup.style.display = 'block';
@@ -338,18 +337,13 @@
             }
         }
 
-        // Popup schließen und rote Farbe entfernen
         function closePopup() {
             document.getElementById('popup').style.display = 'none';
-            if (lastHighlightedId) {
-                osmb.highlight(lastHighlightedId, null);
-                lastHighlightedId = null;
-            }
         }
 
         function jumpTo(lat, lon, buttonId, element) {
             if (!osmb) return;
-            closePopup(); // Altes Popup und rote Selektion löschen
+            closePopup(); 
             
             osmb.setPosition({ latitude: lat, longitude: lon });
             
