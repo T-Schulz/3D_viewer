@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Option 5 - OSM Buildings 3D Prototyp</title>
     
-    <!-- OSM Buildings CSS & JS Bibliotheken laden -->
-    <link rel="stylesheet" href="https://jsdelivr.net">
-    <script src="https://jsdelivr.net"></script>
+    <!-- Umgestellt auf das offizielle und stabilere OSM Buildings CDN -->
+    <link rel="stylesheet" href="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.css">
+    <script src="https://cdn.osmbuildings.org/4.0.0/OSMBuildings.js"></script>
 
     <style>
         :root {
@@ -15,6 +15,7 @@
             --text-color: #f8fafc;
             --accent-color: #38bdf8;
             --card-bg: rgba(30, 41, 59, 0.85);
+            --error-color: #ef4444;
         }
 
         html, body {
@@ -28,7 +29,6 @@
             color: var(--text-color);
         }
 
-        /* Kartencontainer füllt den gesamten Bildschirm */
         #map {
             width: 100%;
             height: 100%;
@@ -37,7 +37,7 @@
             left: 0;
         }
 
-        /* Overlay für Zurück-Button und Info-Box im Stil Ihrer index.html */
+        /* UI-Overlay */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -82,7 +82,6 @@
             background-color: #475569;
         }
 
-        /* Steuerungshinweis unten rechts */
         .controls-hint {
             position: absolute;
             bottom: 20px;
@@ -96,14 +95,41 @@
             color: #94a3b8;
             pointer-events: none;
         }
+
+        /* Sichtbarer Fehler-Hinweis, falls das CDN blockiert ist */
+        #error-overlay {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            background: rgba(30, 41, 59, 0.95);
+            border: 2px solid var(--error-color);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+        }
+
+        #error-overlay h2 {
+            color: var(--error-color);
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Die 3D Karte -->
     <div id="map"></div>
 
-    <!-- UI Steuerungselemente -->
+    <!-- Fehler-Meldung im Browser, falls Scripte blockiert werden -->
+    <div id="error-overlay">
+        <h2>Verbindungsfehler</h2>
+        <p>Die 3D-Kartenbibliothek konnte nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung oder deaktivieren Sie temporär Werbeblocker/VPNs, welche externe CDNs blockieren könnten.</p>
+        <a href="index.html" class="btn-back">Zurück zur Startseite</a>
+    </div>
+
     <div class="ui-overlay">
         <h1>5. OSM Buildings 3D</h1>
         <p>Dieses Modell streamt Geometriedaten live aus der OpenStreetMap-Datenbank und extrudiert Gebäude in Echtzeit über die WebGL-Schnittstelle Ihres Browsers.</p>
@@ -115,23 +141,34 @@
     </div>
 
     <script>
-        // 1. Initialisiere den OSM Buildings Viewer im '#map'-DIV
-        const osmb = new OSMBuildings({
-            container: 'map',
-            position: { latitude: 51.51494, longitude: 7.45423 }, // Koordinaten Dortmund (nahe Dortmunder U)
-            zoom: 16.5,
-            tilt: 45,
-            rotation: 0
-        });
+        // Fallback-Prüfung: Falls die Bibliothek nicht geladen wurde (ReferenceError verhindern)
+        if (typeof OSMBuildings === 'undefined') {
+            document.getElementById('error-overlay').style.display = 'block';
+            console.error("Kritischer Fehler: OSMBuildings konnte nicht geladen werden (CDN-Timeout).");
+        } else {
+            try {
+                // 1. Initialisiere den OSM Buildings Viewer
+                const osmb = new OSMBuildings({
+                    container: 'map',
+                    position: { latitude: 51.51494, longitude: 7.45423 }, // Dortmund Mitte
+                    zoom: 16.5,
+                    tilt: 45,
+                    rotation: 0
+                });
 
-        // 2. Basiskarte (2D Untergrundkacheln) hinzufügen
-        osmb.addMapTiles('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+                // 2. Basiskarte hinzufügen
+                osmb.addMapTiles('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 
-        // 3. 3D-Gebäudedaten live aus dem OSM-Netzwerk laden
-        osmb.addData('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+                // 3. 3D-Gebäudedaten live streamen
+                osmb.addData('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
 
-        // 4. Licht und Schatten anpassen (simuliert Sonnenstand)
-        osmb.date(new Date()); 
+                // 4. Licht/Schatten initialisieren
+                osmb.date(new Date());
+            } catch (e) {
+                console.error("Fehler bei der Karten-Initialisierung:", e);
+                document.getElementById('error-overlay').style.display = 'block';
+            }
+        }
     </script>
 </body>
 </html>
