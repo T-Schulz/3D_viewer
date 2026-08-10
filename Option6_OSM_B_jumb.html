@@ -139,7 +139,7 @@
     <div class="controls-hint">
         3D-Säule anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
-    <script>
+        <script>
         // Globale Variablen für Steuerungslogik
         let osmb;
         let rotationInterval = null;
@@ -173,13 +173,13 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // KORREKTUR: Platzieren von nativen WebGL-Boxen anstelle von addOBJ
-            // Verhindert den XMLHttpRequest-Fehler komplett, da keine externen Dateien geladen werden
-            setTimeout(add3DBoxObjects, 1000);
+            // KORREKTUR: Platzieren von nativen GeoJSON-Gebäuden anstelle von Funktionen
+            // Erzeugt kleine quadratische 3D-Türme komplett clientseitig ohne Serverfehler
+            addNativeGeoJSONDummies();
 
             // Klick-Erkennung für die platzierten 3D-Körper
             osmb.on('click', function(e) {
-                // Wenn wir eine Box treffen, liefert die Engine die ID im Feld 'feature'
+                // GeoJSON-Features liefern ihre ID im Feld 'feature' zurück
                 if (e && e.feature) {
                     const found = highlightBuildings.find(b => b.id === e.feature);
                     if (found) {
@@ -197,18 +197,38 @@
             });
         };
 
-        // KORREKTUR: Verwendet die offizielle v4-Methode addBox()
-        // Zeichnet einen echten, plastischen 3D-Neon-Quader direkt in die Engine
-        function add3DBoxObjects() {
+        // KORREKTUR: Nutzt das standardisierte GeoJSON-Format der v4-Engine,
+        // um 3D-Körper volumetrisch ohne Typ-Fehler in den Shader zu zeichnen
+        function addNativeGeoJSONDummies() {
             highlightBuildings.forEach(b => {
-                osmb.addBox({
-                    id: b.id, // ID wird beim Klick an e.feature übergeben
-                    position: { latitude: b.lat, longitude: b.lon },
-                    // 20x20 Meter Grundfläche, ragt als 60 Meter hoher Turm aus dem Dach empor
-                    dimensions: { x: 20, y: 20, z: 60 }, 
-                    color: '#38bdf8', // Leuchtendes Neon-Cyan aus Ihrem UI-Design
-                    opacity: 0.8
-                });
+                // Wir erzeugen ein kleines Quadrat (ca. 20m) um die Koordinate herum
+                const offset = 0.0001; 
+                
+                const geojson = {
+                    type: "FeatureCollection",
+                    features: [{
+                        type: "Feature",
+                        id: b.id, // ID für die e.feature-Klickabfrage
+                        properties: {
+                            height: 60,         // Höhe in Metern
+                            color: "#38bdf8",   // Neon-Cyan aus Ihrem UI-Design
+                            roofColor: "#0ea5e9"
+                        },
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [[
+                                [b.lon - offset, b.lat - offset],
+                                [b.lon + offset, b.lat - offset],
+                                [b.lon + offset, b.lat + offset],
+                                [b.lon - offset, b.lat + offset],
+                                [b.lon - offset, b.lat - offset] // Polygon schließen
+                            ]]
+                        }
+                    }]
+                };
+
+                // Übergabe an den nativen GeoJSON-Parser der Engine
+                osmb.addGeoJSON(geojson);
             });
         }
 
