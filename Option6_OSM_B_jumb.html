@@ -250,7 +250,7 @@
         let currentRotation = 0;
         let currentTilt = 45;
 
-        // Datenbank für die 4 Highlight-Gebäude
+        // Datenbank für die 4 Highlight-Gebäude inklusive Beschreibungen
         const highlightBuildings = [
             { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
             { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
@@ -277,43 +277,56 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // KORREKTUR: Wir nutzen die native Klick-Erkennung auf der Karte für die POIs
+            // KORREKTUR: Wir platzieren die echten 3D-Dummys auf den Gebäuden, sobald die Engine bereit ist
+            // Die Verzögerung stellt sicher, dass der WebGL-Kontext vollständig geladen ist
+            setTimeout(add3DDummyObjects, 1000);
+
+            // NEU: Klick-Erkennung speziell für platzierte 3D-Objekte der Engine
             osmb.on('click', function(e) {
-                if (e.lat && e.lon) {
-                    checkGeofenceClick(e.lat, e.lon, e.containerX || e.x, e.containerY || e.y);
+                // Wenn wir ein von uns platziertes 3D-Objekt treffen, liefert die Engine dessen ID im Feld 'feature'
+                if (e && e.feature) {
+                    // Suchen, welches Gebäude zu der ID gehört
+                    const found = highlightBuildings.find(b => b.id === e.feature);
+                    if (found) {
+                        const screenX = e.containerX !== undefined ? e.containerX : e.x;
+                        const screenY = e.containerY !== undefined ? e.containerY : e.y;
+                        openBuildingPopup(found, screenX, screenY);
+                        return; // Verhindert das sofortige Schließen
+                    }
+                }
+                
+                // Klick ins Leere schließt das Fenster
+                if (window.event && window.event.target.id === 'map') {
+                    document.getElementById('popup').style.display = 'none';
                 }
             });
         };
 
-        // KORREKTUR: Mathematisches Geofencing über die Klick-Koordinaten.
-        // Das braucht KEINE Engine-Funktionen wie .transform() oder .project() und läuft 100% absturzsicher.
-        function checkGeofenceClick(clickLat, clickLon, screenX, screenY) {
-            const threshold = 0.0018; // Klick-Radius um das Gebäude
-            let found = null;
+        // KORREKTUR: Platzieren von echten 3D-Geometrien über die offizielle addOBJ-Schnittstelle
+        function add3DDummyObjects() {
+            highlightBuildings.forEach(b => {
+                // osmb.addOBJ rendert einen plastischen 3D-Körper direkt in den WebGL-Raum
+                osmb.addOBJ({
+                    id: b.id, // Die ID wird beim Klick als 'e.feature' zurückgegeben
+                    position: { latitude: b.lat, longitude: b.lon },
+                    // Wir bauen einen schmalen, auffälligen 3D-Quader (Turm/Antenne) auf dem Dach
+                    scale: { x: 15, y: 15, z: 45 }, // 15x15 Meter breit, 45 Meter hoch
+                    color: '#38bdf8', // Neon-Cyan passend zu Ihrem UI-Design
+                    opacity: 0.85
+                });
+            });
+        }
 
-            for (let b of highlightBuildings) {
-                let d = Math.sqrt(Math.pow(b.lat - clickLat, 2) + Math.pow(b.lon - clickLon, 2));
-                if (d < threshold) {
-                    found = b;
-                    break;
-                }
-            }
-
+        // Funktion zum Öffnen des Infofensters an den Klick-Pixeln
+        function openBuildingPopup(building, x, y) {
             const popup = document.getElementById('popup');
-            if (found) {
-                // Info-Inhalte in das HTML-Popup schreiben
-                document.getElementById('popup-title').innerText = found.name;
-                document.getElementById('popup-desc').innerText = found.desc;
-                document.getElementById('popup-link').href = found.url;
+            document.getElementById('popup-title').innerText = building.name;
+            document.getElementById('popup-desc').innerText = building.desc;
+            document.getElementById('popup-link').href = building.url;
 
-                // Positioniert das Popup exakt an den Klick-Pixeln der Maus
-                popup.style.left = (screenX + 15) + 'px';
-                popup.style.top = (screenY - 50) + 'px';
-                popup.style.display = 'block';
-            } else {
-                // Klick ins Leere schließt das Fenster
-                popup.style.display = 'none';
-            }
+            popup.style.left = (x + 15) + 'px';
+            popup.style.top = (y - 50) + 'px';
+            popup.style.display = 'block';
         }
 
         function closePopup() {
