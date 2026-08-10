@@ -259,7 +259,7 @@
         ];
 
         window.onload = function() {
-            // KORREKTUR: maxZoom auf 19 festgenagelt, um die Server-Fehler (Bad Request 400) bei Zoom 20+ zu stoppen
+            // maxZoom auf 19 beschränkt, um fehlerhafte Serveranfragen zu minimieren
             osmb = new OSMBuildings({
                 container: 'map',
                 position: { latitude: 51.51494, longitude: 7.45423 }, 
@@ -268,41 +268,41 @@
                 maxZoom: 19 
             });
 
-            // Geteilte URLs für stabile Kacheln
+            // Geteilte URLs für stabile Kartenkacheln
             const mapTeil1 = "https://a.tile.openstreetmap.org/";
             const mapTeil2 = "{z}/{x}/{y}.png";
             osmb.addMapTiles(mapTeil1 + mapTeil2);
 
-            const dataTeil1 = "https://{s}.data.osmbuildings.org/0.2/";
+            // KORREKTUR: Festgenagelt auf Server 'a.', da dieser CORS-Anfragen von GitHub-Pages erlaubt.
+            // Das verhindert die Blockaden der Server b, c und d bei Kamerabewegungen.
+            const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // Jedes Mal, wenn sich die Kamera bewegt oder rotiert, müssen wir die Marker neu zeichnen
+            // Event-Listener für Positionsänderungen zur Marker-Aktualisierung
             osmb.on('change', updateCustomMarkers);
             
-            // Initiales Zeichnen der Marker nach dem Start
+            // Marker kurz nach dem Start initialisieren
             setTimeout(updateCustomMarkers, 800);
 
-            // Klick-Event-Handler für freie Kartenbereiche
+            // Klick-Event-Handler für das Schließen bei Klick ins Leere
             osmb.on('click', function(e) {
                 const popup = document.getElementById('popup');
-                // Wenn wir nicht auf ein Steuerungs-UI klicken, schließt ein Klick ins Leere das Fenster
                 if (window.event && window.event.target.id === 'map') {
                     popup.style.display = 'none';
                 }
             });
         };
 
-        // KORREKTUR: Ein absolut sicheres, pixelgenaues Marker-System via HTML-Canvas-Overlays
+        // KORREKTUR: Nutzt 'projectPoint' statt 'project' für die native v4 WebGL-Kamera-Matrix
         function updateCustomMarkers() {
             highlightBuildings.forEach(b => {
-                // Holt die exakten Bildschirm-Pixel für die Längen- und Breitengrade aus der 3D-Engine
-                const screenPos = osmb.project({ latitude: b.lat, longitude: b.lon });
+                // Errechnet die Bildschirm-Pixel anhand der 3D-Kameramatrix der v4 Engine
+                const screenPos = osmb.projectPoint({ latitude: b.lat, longitude: b.lon });
                 
-                // Wir suchen, ob für dieses Gebäude bereits ein HTML-Marker-Element existiert
                 let markerDiv = document.getElementById('marker-' + b.id);
                 
-                // Falls nicht, erstellen wir einen auffälligen, pulsierenden Zielring im DOM
+                // Falls noch kein Element existiert, erzeugen wir den hellblauen Interaktions-Ring
                 if (!markerDiv) {
                     markerDiv = document.createElement('div');
                     markerDiv.id = 'marker-' + b.id;
@@ -310,13 +310,12 @@
                     markerDiv.style.width = '24px';
                     markerDiv.style.height = '24px';
                     markerDiv.style.borderRadius = '50%';
-                    markerDiv.style.border = '3px solid #38bdf8'; // Cyan/Hellblau-Akzentfarbe aus Ihrem Index
+                    markerDiv.style.border = '3px solid #38bdf8';
                     markerDiv.style.backgroundColor = 'rgba(56, 189, 248, 0.4)';
                     markerDiv.style.cursor = 'pointer';
                     markerDiv.style.zIndex = '1500';
                     markerDiv.style.boxShadow = '0 0 10px #38bdf8, inset 0 0 5px #38bdf8';
                     
-                    // Klick auf den Marker öffnet sofort das Infofenster
                     markerDiv.onclick = function(e) {
                         e.stopPropagation();
                         openBuildingPopup(b, parseFloat(markerDiv.style.left), parseFloat(markerDiv.style.top));
@@ -325,19 +324,17 @@
                     document.body.appendChild(markerDiv);
                 }
 
-                // Wenn der Punkt auf dem Bildschirm sichtbar ist, positionieren wir ihn millimetergenau über dem Gebäude
+                // Pixelprüfung für die Sichtbarkeit auf dem Monitor
                 if (screenPos && screenPos.x > 0 && screenPos.y > 0 && screenPos.x < window.innerWidth && screenPos.y < window.innerHeight) {
-                    markerDiv.style.left = (screenPos.x - 12) + 'px'; // Zentrieren des 24px Kreises
+                    markerDiv.style.left = (screenPos.x - 12) + 'px'; 
                     markerDiv.style.top = (screenPos.y - 12) + 'px';
                     markerDiv.style.display = 'block';
                 } else {
-                    // Wenn das Gebäude außerhalb des Sichtfelds liegt, blenden wir den Punkt aus
                     markerDiv.style.display = 'none';
                 }
             });
         }
 
-        // Funktion zum Öffnen des Infofensters an den Pixel-Koordinaten des Markers
         function openBuildingPopup(building, x, y) {
             const popup = document.getElementById('popup');
             document.getElementById('popup-title').innerText = building.name;
@@ -357,10 +354,8 @@
             if (!osmb) return;
             closePopup(); 
             
-            // Kamera über die offizielle Methode verschieben
             osmb.setPosition({ latitude: lat, longitude: lon });
             
-            // MaxZoom (19) beachten beim automatischen Zoomen
             if (buttonId === 'bvb' || buttonId === 'tu') {
                 osmb.setZoom(15.5); 
             } else {
@@ -373,7 +368,6 @@
                 element.classList.add('active');
             }
             
-            // Marker sofort nach dem Sprung an die neue Position heften
             setTimeout(updateCustomMarkers, 300);
         }
 
@@ -392,7 +386,7 @@
                 rotationInterval = setInterval(() => {
                     currentRotation = (currentRotation + 0.2) % 360;
                     osmb.setRotation(currentRotation);
-                    updateCustomMarkers(); // Synchronisiert die HTML-Ringe während der Drehung
+                    updateCustomMarkers(); // Synchronisiert die HTML-Ringe flüssig während der Bewegung
                 }, 40);
             }
         }
@@ -401,7 +395,7 @@
             if (!osmb) return;
             currentTilt = Math.max(10, Math.min(85, currentTilt + delta));
             osmb.setTilt(currentTilt);
-            setTimeout(updateCustomMarkers, 50); // Aktualisiert die Ring-Positionen nach dem Neigen
+            setTimeout(updateCustomMarkers, 50); 
         }
     </script>
 </body>
