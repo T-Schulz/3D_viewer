@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 5 - OSM Buildings 3D Prototyp</title>
+    
+    <!-- OSM Buildings CSS & JS Bibliotheken laden -->
+    <link rel="stylesheet" href="https://jsdelivr.net">
+    <script src="https://jsdelivr.net"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --card-bg: rgba(30, 41, 59, 0.85);
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Kartencontainer füllt den gesamten Bildschirm */
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Overlay für Zurück-Button und Info-Box im Stil Ihrer index.html */
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            border-radius: 12px;
+            max-width: 320px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--accent-color);
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin: 0 0 1rem 0;
+            line-height: 1.4;
+        }
+
+        .btn-back {
+            display: inline-block;
+            background-color: #334155;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+            border: 1px solid #475569;
+        }
+
+        .btn-back:hover {
+            background-color: #475569;
+        }
+
+        /* Steuerungshinweis unten rechts */
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Die 3D Karte -->
+    <div id="map"></div>
+
+    <!-- UI Steuerungselemente -->
+    <div class="ui-overlay">
+        <h1>5. OSM Buildings 3D</h1>
+        <p>Dieses Modell streamt Geometriedaten live aus der OpenStreetMap-Datenbank und extrudiert Gebäude in Echtzeit über die WebGL-Schnittstelle Ihres Browsers.</p>
+        <a href="index.html" class="btn-back">← Zur Übersicht</a>
+    </div>
+
+    <div class="controls-hint">
+        Sicht rotieren: <b>Rechte Maustaste / STRG + Ziehen</b>
+    </div>
+
+    <script>
+        // 1. Initialisiere den OSM Buildings Viewer im '#map'-DIV
+        const osmb = new OSMBuildings({
+            container: 'map',
+            position: { latitude: 51.51494, longitude: 7.45423 }, // Koordinaten Dortmund (nahe Dortmunder U)
+            zoom: 16.5,
+            tilt: 45,
+            rotation: 0
+        });
+
+        // 2. Basiskarte (2D Untergrundkacheln) hinzufügen
+        osmb.addMapTiles('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+        // 3. 3D-Gebäudedaten live aus dem OSM-Netzwerk laden
+        osmb.addData('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+
+        // 4. Licht und Schatten anpassen (simuliert Sonnenstand)
+        osmb.date(new Date()); 
+    </script>
+</body>
+</html>
