@@ -243,14 +243,15 @@
     <div class="controls-hint">
         Gebäude anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
-        <script>
+    <script>
         // Globale Variablen
         let osmb;
         let rotationInterval = null;
         let currentRotation = 0;
         let currentTilt = 45;
+        let lastHighlightedId = null; // Speichert das aktuell rot gefärbte Gebäude
 
-        // Datenbank für die 4 Highlight-Gebäude (Zugeordnet via geografischer Nähe beim Klick)
+        // Datenbank für die 4 Highlight-Gebäude
         const highlightBuildings = [
             { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
             { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
@@ -269,6 +270,7 @@
                 rotation: currentRotation
             });
 
+            // Ihre ergänzten, stabilen Links
             const mapTeil1 = "https://a.tile.openstreetmap.org/";
             const mapTeil2 = "{z}/{x}/{y}.png";
             osmb.addMapTiles(mapTeil1 + mapTeil2);
@@ -277,20 +279,27 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // Klick-Event-Handler für die 3D-Gebäude registrieren
+            // Klick-Event-Handler mit korrigierter Pixel-Abfrage (containerX/Y)
             osmb.on('click', function(e) {
-                if (e && e.lat && e.lon) {
-                    checkBuildingClick(e.lat, e.lon, e.x, e.y);
+                // Wenn ein Gebäude getroffen wurde, hat das Event eine Feature-ID
+                const buildingId = e.feature; 
+                
+                // Pixel-Koordinaten absolut sicher auslesen (Engine-Wechsel abfangen)
+                const screenX = e.containerX !== undefined ? e.containerX : e.x;
+                const screenY = e.containerY !== undefined ? e.containerY : e.y;
+
+                if (e.lat && e.lon) {
+                    checkBuildingClick(e.lat, e.lon, screenX, screenY, buildingId);
                 }
             });
         };
 
-        // Funktion zur Erkennung, ob eines der Zielgebäude angeklickt wurde
-        function checkBuildingClick(clickLat, clickLon, screenX, screenY) {
-            // Wir suchen das Gebäude, das den Klick-Koordinaten am nächsten liegt
+        // Funktion zur Erkennung und visuellen Selektion (Rotfärbung)
+        function checkBuildingClick(clickLat, clickLon, screenX, screenY, buildingId) {
             const threshold = 0.0015; 
             let found = null;
 
+            // 1. Prüfen, ob der Klick geografisch nah an einem unserer POIs war
             for (let b of highlightBuildings) {
                 let d = Math.sqrt(Math.pow(b.lat - clickLat, 2) + Math.pow(b.lon - clickLon, 2));
                 if (d < threshold) {
@@ -299,30 +308,48 @@
                 }
             }
 
+            // 2. Visuelles Feedback: Altes Gebäude entfärben, neues Gebäude rot färben
+            if (lastHighlightedId) {
+                osmb.highlight(lastHighlightedId, null); // Zurücksetzen auf Standardfarbe
+                lastHighlightedId = null;
+            }
+
             const popup = document.getElementById('popup');
+            
             if (found) {
-                // Info-Inhalte dynamisch befüllen
+                // Wenn die Engine uns eine Gebäude-ID liefert, färben wir es leuchtend ROT (#ef4444)
+                if (buildingId) {
+                    osmb.highlight(buildingId, '#ef4444');
+                    lastHighlightedId = buildingId; // ID für späteres Zurücksetzen merken
+                }
+
+                // Info-Inhalte in das HTML-Popup schreiben
                 document.getElementById('popup-title').innerText = found.name;
                 document.getElementById('popup-desc').innerText = found.desc;
                 document.getElementById('popup-link').href = found.url;
 
-                // Popup direkt an den Maus-Mittelpunkt auf dem Bildschirm heften
+                // Popup exakt an die korrigierten Maus-Pixel heften
                 popup.style.left = (screenX + 15) + 'px';
                 popup.style.top = (screenY - 50) + 'px';
                 popup.style.display = 'block';
             } else {
-                // Klick im leeren Raum schließt das Fenster
+                // Klick ins Leere schließt das Fenster
                 popup.style.display = 'none';
             }
         }
 
+        // Popup schließen und rote Farbe entfernen
         function closePopup() {
             document.getElementById('popup').style.display = 'none';
+            if (lastHighlightedId) {
+                osmb.highlight(lastHighlightedId, null);
+                lastHighlightedId = null;
+            }
         }
 
         function jumpTo(lat, lon, buttonId, element) {
             if (!osmb) return;
-            closePopup(); // Altes Popup beim Verreisen schließen
+            closePopup(); // Altes Popup und rote Selektion löschen
             
             osmb.setPosition({ latitude: lat, longitude: lon });
             
