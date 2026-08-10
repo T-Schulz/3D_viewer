@@ -38,7 +38,6 @@
             left: 0;
         }
 
-        /* Erweitertes UI-Overlay */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -55,142 +54,44 @@
             overflow-y: auto;
         }
 
-        .ui-overlay h1 {
-            font-size: 1.2rem;
-            margin: 0 0 0.5rem 0;
-            color: var(--accent-color);
-        }
-
-        .ui-overlay p {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            margin: 0 0 1rem 0;
-            line-height: 1.4;
-        }
-
-        .control-section {
-            border-top: 1px solid var(--border-color);
-            padding-top: 1rem;
-            margin-top: 1rem;
-        }
-
-        .control-section h3 {
-            font-size: 0.9rem;
-            margin: 0 0 0.75rem 0;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #cbd5e1;
-        }
-
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .btn-grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-        }
-
+        .ui-overlay h1 { font-size: 1.2rem; margin: 0 0 0.5rem 0; color: var(--accent-color); }
+        .ui-overlay p { font-size: 0.85rem; color: #94a3b8; margin: 0 0 1rem 0; line-height: 1.4; }
+        .control-section { border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem; }
+        .control-section h3 { font-size: 0.9rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        
         .btn-control {
-            background-color: #334155;
-            color: var(--text-color);
-            border: 1px solid #475569;
-            padding: 0.6rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: background-color 0.2s, border-color 0.2s;
-            text-align: center;
+            background-color: #334155; color: var(--text-color); border: 1px solid #475569;
+            padding: 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+            font-weight: 500; transition: background-color 0.2s; text-align: center;
         }
-
-        .btn-control:hover {
-            background-color: #475569;
-            border-color: var(--accent-color);
-        }
-
-        .btn-control.active {
-            background-color: var(--accent-color);
-            color: #0f172a;
-            border-color: var(--accent-hover);
-            font-weight: 600;
-        }
+        .btn-control:hover { background-color: #475569; border-color: var(--accent-color); }
+        .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); font-weight: 600; }
 
         .btn-back {
-            display: block;
-            background-color: #1e293b;
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-            padding: 0.6rem;
-            border-radius: 6px;
-            transition: color 0.2s, background-color 0.2s;
-            border: 1px solid var(--border-color);
-            text-align: center;
-            margin-top: 1rem;
+            display: block; background-color: #1e293b; color: #94a3b8; text-decoration: none;
+            font-size: 0.85rem; font-weight: 600; padding: 0.6rem; border-radius: 6px;
+            border: 1px solid var(--border-color); text-align: center; margin-top: 1rem;
         }
+        .btn-back:hover { background-color: #334155; color: var(--text-color); }
 
-        .btn-back:hover {
-            background-color: #334155;
-            color: var(--text-color);
-        }
-
-        /* Stil für das Gebäude-Info-Popup */
         .building-popup {
-            position: absolute;
-            z-index: 2000;
-            background: #1e293b;
-            border: 2px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            max-width: 260px;
-            display: none;
-            pointer-events: auto;
+            position: absolute; z-index: 2000; background: #1e293b; border: 2px solid var(--accent-color);
+            padding: 1rem; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 260px; display: none; pointer-events: auto;
         }
-
-        .building-popup h4 {
-            margin: 0 0 0.5rem 0;
-            color: var(--accent-color);
-            font-size: 1rem;
-        }
-
-        .building-popup p {
-            margin: 0 0 0.75rem 0;
-            font-size: 0.8rem;
-            color: #cbd5e1;
-            line-height: 1.3;
-        }
-
-        .popup-close {
-            position: absolute;
-            top: 5px;
-            right: 8px;
-            background: none;
-            border: none;
-            color: #64748b;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
+        .building-popup h4 { margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; }
+        .building-popup p { margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.3; }
+        
+        .popup-close { position: absolute; top: 5px; right: 8px; background: none; border: none; color: #64748b; cursor: pointer; font-size: 0.9rem; }
         .popup-close:hover { color: #f8fafc; }
 
         .controls-hint {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            pointer-events: none;
+            position: absolute; bottom: 20px; right: 20px; z-index: 1000; background: var(--card-bg);
+            border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px;
+            font-size: 0.8rem; color: #94a3b8; pointer-events: none;
         }
     </style>
 </head>
@@ -198,12 +99,10 @@
 
     <div id="map"></div>
 
-    <!-- Interaktives UI Control Center -->
     <div class="ui-overlay">
         <h1>6. OSM Buildings Pro</h1>
         <p>Interaktiver 3D-Viewer mit Koordinatensprüngen, Kameraperspektiven und Autopilot-Modus.</p>
 
-        <!-- Sektion 1: Sprung zu POIs -->
         <div class="control-section">
             <h3>Koordinaten-Sprung (Jump)</h3>
             <div class="btn-group">
@@ -214,13 +113,11 @@
             </div>
         </div>
 
-        <!-- Sektion 2: Autopilot (Rotation) -->
         <div class="control-section">
             <h3>Kamera-Rotation</h3>
             <button id="rotationBtn" class="btn-control" style="width: 100%;" onclick="toggleRotation()">Autopilot: Starten</button>
         </div>
 
-        <!-- Sektion 3: Manuelle Neigung (Tilt) -->
         <div class="control-section">
             <h3>Ansicht neigen (Tilt)</h3>
             <div class="btn-grid-2">
@@ -232,7 +129,6 @@
         <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
     </div>
 
-    <!-- Dynamisches HTML-Popup-Element im DOM -->
     <div id="popup" class="building-popup">
         <button class="popup-close" onclick="closePopup()">×</button>
         <h4 id="popup-title">Gebäude-Info</h4>
@@ -241,7 +137,7 @@
     </div>
 
     <div class="controls-hint">
-        Gebäude anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
+        3D-Säule anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
     </div>
     <script>
         // Globale Variablen für Steuerungslogik
@@ -277,21 +173,20 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // KORREKTUR: Wir platzieren die echten 3D-Dummys auf den Gebäuden, sobald die Engine bereit ist
-            // Die Verzögerung stellt sicher, dass der WebGL-Kontext vollständig geladen ist
-            setTimeout(add3DDummyObjects, 1000);
+            // KORREKTUR: Platzieren von nativen WebGL-Boxen anstelle von addOBJ
+            // Verhindert den XMLHttpRequest-Fehler komplett, da keine externen Dateien geladen werden
+            setTimeout(add3DBoxObjects, 1000);
 
-            // NEU: Klick-Erkennung speziell für platzierte 3D-Objekte der Engine
+            // Klick-Erkennung für die platzierten 3D-Körper
             osmb.on('click', function(e) {
-                // Wenn wir ein von uns platziertes 3D-Objekt treffen, liefert die Engine dessen ID im Feld 'feature'
+                // Wenn wir eine Box treffen, liefert die Engine die ID im Feld 'feature'
                 if (e && e.feature) {
-                    // Suchen, welches Gebäude zu der ID gehört
                     const found = highlightBuildings.find(b => b.id === e.feature);
                     if (found) {
                         const screenX = e.containerX !== undefined ? e.containerX : e.x;
                         const screenY = e.containerY !== undefined ? e.containerY : e.y;
                         openBuildingPopup(found, screenX, screenY);
-                        return; // Verhindert das sofortige Schließen
+                        return; 
                     }
                 }
                 
@@ -302,17 +197,17 @@
             });
         };
 
-        // KORREKTUR: Platzieren von echten 3D-Geometrien über die offizielle addOBJ-Schnittstelle
-        function add3DDummyObjects() {
+        // KORREKTUR: Verwendet die offizielle v4-Methode addBox()
+        // Zeichnet einen echten, plastischen 3D-Neon-Quader direkt in die Engine
+        function add3DBoxObjects() {
             highlightBuildings.forEach(b => {
-                // osmb.addOBJ rendert einen plastischen 3D-Körper direkt in den WebGL-Raum
-                osmb.addOBJ({
-                    id: b.id, // Die ID wird beim Klick als 'e.feature' zurückgegeben
+                osmb.addBox({
+                    id: b.id, // ID wird beim Klick an e.feature übergeben
                     position: { latitude: b.lat, longitude: b.lon },
-                    // Wir bauen einen schmalen, auffälligen 3D-Quader (Turm/Antenne) auf dem Dach
-                    scale: { x: 15, y: 15, z: 45 }, // 15x15 Meter breit, 45 Meter hoch
-                    color: '#38bdf8', // Neon-Cyan passend zu Ihrem UI-Design
-                    opacity: 0.85
+                    // 20x20 Meter Grundfläche, ragt als 60 Meter hoher Turm aus dem Dach empor
+                    dimensions: { x: 20, y: 20, z: 60 }, 
+                    color: '#38bdf8', // Leuchtendes Neon-Cyan aus Ihrem UI-Design
+                    opacity: 0.8
                 });
             });
         }
