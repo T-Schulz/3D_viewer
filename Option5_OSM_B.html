@@ -131,15 +131,14 @@
                 maxZoom: 22
             });
 
-            // Basiskarte laden (Hintergrund-Kacheln ohne den fehlerhaften {s}-Subdomain-Filter)
+            // Basiskarte laden (Hintergrund-Kacheln)
             osmb.addMapTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 
-            // KORREKTUR: Die exakte URL-Zerlegung für die 3D-Kacheln laut Dokumentation
-            const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
+            // KORREKTUR: Protokoll-relativer Link mit dem vom Server geforderten Subdomain-Splitter
+            const dataTeil1 = "//{s}.data.osmbuildings.org/0.2/";
             const dataTeil2 = "anonymous/tile/{z}/{x}/{y}.json";
 
-            // KORREKTUR: Verwendet die offizielle v4-Methode 'addGeoJSONTiles' 
-            // mit der korrekten '.json'-Endung, damit die 3D-Gebäude geladen werden.
+            // Führt die Teile zu '//{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json' zusammen
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
         };
         
