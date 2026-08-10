@@ -1,1 +1,84 @@
-<h1>TU Dortmund - 3D Stadtmodell Infoseite</h1><p>Symbolischer Inhalt für die Universität.</p><a href="Option6_OSM_B_jumb.html">Zurück zur 3D-Karte</a>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Stadtmodell Dortmund - Detailansicht</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            margin: 0 0 1rem 0;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0 0 2rem 0;
+        }
+
+        .btn-back {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: #0f172a;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-back:hover {
+            background-color: var(--accent-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Hier den Namen des Gebäudes eintragen -->
+        <h1>TU Dortmund</h1> 
+        
+        <!-- Hier den Beschreibungstext eintragen -->
+        <p>Dies ist die symbolische Textunterseite für das ausgewählte Objekt im 3D-Stadtmodell.</p>
+        
+        <!-- Link führt zurück zur Option 6 Karte -->
+        <a href="Option6_OSM_B_jumb.html" class="btn-back">← Zurück zur 3D-Karte</a>
+    </div>
+
+</body>
+</html>

@@ -259,7 +259,7 @@
         ];
 
         window.onload = function() {
-            // maxZoom auf 19 beschränkt, um fehlerhafte Serveranfragen zu minimieren
+            // maxZoom auf 19 beschränkt, um Serverfehler bei Zoom 20+ zu unterbinden
             osmb = new OSMBuildings({
                 container: 'map',
                 position: { latitude: 51.51494, longitude: 7.45423 }, 
@@ -273,8 +273,7 @@
             const mapTeil2 = "{z}/{x}/{y}.png";
             osmb.addMapTiles(mapTeil1 + mapTeil2);
 
-            // KORREKTUR: Festgenagelt auf Server 'a.', da dieser CORS-Anfragen von GitHub-Pages erlaubt.
-            // Das verhindert die Blockaden der Server b, c und d bei Kamerabewegungen.
+            // KORREKTUR: Festgenagelt auf Server 'a.', da dieser CORS-Anfragen von GitHub-Pages erlaubt
             const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
@@ -294,11 +293,11 @@
             });
         };
 
-        // KORREKTUR: Nutzt 'projectPoint' statt 'project' für die native v4 WebGL-Kamera-Matrix
+        // KORREKTUR: Nutzt die offizielle Methode '.transform()', um 3D-Koordinaten in Pixel umzurechnen
         function updateCustomMarkers() {
             highlightBuildings.forEach(b => {
-                // Errechnet die Bildschirm-Pixel anhand der 3D-Kameramatrix der v4 Engine
-                const screenPos = osmb.projectPoint({ latitude: b.lat, longitude: b.lon });
+                // Die Methode transform(lat, lon, elevation) liefert ein Objekt mit {x, y} zurück
+                const screenPos = osmb.transform(b.lat, b.lon, 0);
                 
                 let markerDiv = document.getElementById('marker-' + b.id);
                 
