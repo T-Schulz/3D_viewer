@@ -250,7 +250,7 @@
         let currentRotation = 0;
         let currentTilt = 45;
 
-        // Datenbank für die 4 Highlight-Gebäude inklusive symbolischem Info-Text
+        // Datenbank für die 4 Highlight-Gebäude inklusive Beschreibungen
         const highlightBuildings = [
             { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
             { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
@@ -259,17 +259,16 @@
         ];
 
         window.onload = function() {
+            // KORREKTUR: maxZoom auf 19 festgenagelt, um die Server-Fehler (Bad Request 400) bei Zoom 20+ zu stoppen
             osmb = new OSMBuildings({
                 container: 'map',
                 position: { latitude: 51.51494, longitude: 7.45423 }, 
                 zoom: 16,
                 minZoom: 14,
-                maxZoom: 22,
-                tilt: currentTilt,
-                rotation: currentRotation
+                maxZoom: 19 
             });
 
-            // Ihre ergänzten, stabilen Links
+            // Geteilte URLs für stabile Kacheln
             const mapTeil1 = "https://a.tile.openstreetmap.org/";
             const mapTeil2 = "{z}/{x}/{y}.png";
             osmb.addMapTiles(mapTeil1 + mapTeil2);
@@ -278,63 +277,76 @@
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
 
-            // NEU: Setzt unübersehbare 3D-Marker auf die Gebäude, sobald die Karte geladen ist
-            addVisualMarkers();
+            // Jedes Mal, wenn sich die Kamera bewegt oder rotiert, müssen wir die Marker neu zeichnen
+            osmb.on('change', updateCustomMarkers);
+            
+            // Initiales Zeichnen der Marker nach dem Start
+            setTimeout(updateCustomMarkers, 800);
 
-            // Klick-Event-Handler für die Interaktion
+            // Klick-Event-Handler für freie Kartenbereiche
             osmb.on('click', function(e) {
-                const screenX = e.containerX !== undefined ? e.containerX : e.x;
-                const screenY = e.containerY !== undefined ? e.containerY : e.y;
-
-                if (e.lat && e.lon) {
-                    checkBuildingClick(e.lat, e.lon, screenX, screenY);
+                const popup = document.getElementById('popup');
+                // Wenn wir nicht auf ein Steuerungs-UI klicken, schließt ein Klick ins Leere das Fenster
+                if (window.event && window.event.target.id === 'map') {
+                    popup.style.display = 'none';
                 }
             });
         };
 
-        // NEU: Erzeugt leuchtend rote 3D-Marker-Pins auf den Koordinaten der Gebäude
-        function addVisualMarkers() {
+        // KORREKTUR: Ein absolut sicheres, pixelgenaues Marker-System via HTML-Canvas-Overlays
+        function updateCustomMarkers() {
             highlightBuildings.forEach(b => {
-                // osmb.addMarker platziert ein interaktives 3D-Icon auf der Karte
-                osmb.addMarker({
-                    latitude: b.lat,
-                    longitude: b.lon,
-                    color: '#ef4444', // Kräftiges Signalrot
-                    amplitude: 25     // Höhe des Pins über dem Boden, damit er aus dem Dach ragt
-                });
+                // Holt die exakten Bildschirm-Pixel für die Längen- und Breitengrade aus der 3D-Engine
+                const screenPos = osmb.project({ latitude: b.lat, longitude: b.lon });
+                
+                // Wir suchen, ob für dieses Gebäude bereits ein HTML-Marker-Element existiert
+                let markerDiv = document.getElementById('marker-' + b.id);
+                
+                // Falls nicht, erstellen wir einen auffälligen, pulsierenden Zielring im DOM
+                if (!markerDiv) {
+                    markerDiv = document.createElement('div');
+                    markerDiv.id = 'marker-' + b.id;
+                    markerDiv.style.position = 'absolute';
+                    markerDiv.style.width = '24px';
+                    markerDiv.style.height = '24px';
+                    markerDiv.style.borderRadius = '50%';
+                    markerDiv.style.border = '3px solid #38bdf8'; // Cyan/Hellblau-Akzentfarbe aus Ihrem Index
+                    markerDiv.style.backgroundColor = 'rgba(56, 189, 248, 0.4)';
+                    markerDiv.style.cursor = 'pointer';
+                    markerDiv.style.zIndex = '1500';
+                    markerDiv.style.boxShadow = '0 0 10px #38bdf8, inset 0 0 5px #38bdf8';
+                    
+                    // Klick auf den Marker öffnet sofort das Infofenster
+                    markerDiv.onclick = function(e) {
+                        e.stopPropagation();
+                        openBuildingPopup(b, parseFloat(markerDiv.style.left), parseFloat(markerDiv.style.top));
+                    };
+                    
+                    document.body.appendChild(markerDiv);
+                }
+
+                // Wenn der Punkt auf dem Bildschirm sichtbar ist, positionieren wir ihn millimetergenau über dem Gebäude
+                if (screenPos && screenPos.x > 0 && screenPos.y > 0 && screenPos.x < window.innerWidth && screenPos.y < window.innerHeight) {
+                    markerDiv.style.left = (screenPos.x - 12) + 'px'; // Zentrieren des 24px Kreises
+                    markerDiv.style.top = (screenPos.y - 12) + 'px';
+                    markerDiv.style.display = 'block';
+                } else {
+                    // Wenn das Gebäude außerhalb des Sichtfelds liegt, blenden wir den Punkt aus
+                    markerDiv.style.display = 'none';
+                }
             });
         }
 
-        // Funktion zur Erkennung, ob in die Nähe eines Markers geklickt wurde
-        function checkBuildingClick(clickLat, clickLon, screenX, screenY) {
-            // Suchradius um den Marker herum
-            const threshold = 0.0018; 
-            let found = null;
-
-            for (let b of highlightBuildings) {
-                let d = Math.sqrt(Math.pow(b.lat - clickLat, 2) + Math.pow(b.lon - clickLon, 2));
-                if (d < threshold) {
-                    found = b;
-                    break;
-                }
-            }
-
+        // Funktion zum Öffnen des Infofensters an den Pixel-Koordinaten des Markers
+        function openBuildingPopup(building, x, y) {
             const popup = document.getElementById('popup');
-            
-            if (found) {
-                // Info-Inhalte in das HTML-Popup schreiben
-                document.getElementById('popup-title').innerText = found.name;
-                document.getElementById('popup-desc').innerText = found.desc;
-                document.getElementById('popup-link').href = found.url;
+            document.getElementById('popup-title').innerText = building.name;
+            document.getElementById('popup-desc').innerText = building.desc;
+            document.getElementById('popup-link').href = building.url;
 
-                // Popup exakt an die Maus-Pixel heften
-                popup.style.left = (screenX + 15) + 'px';
-                popup.style.top = (screenY - 50) + 'px';
-                popup.style.display = 'block';
-            } else {
-                // Klick ins Leere schließt das Fenster
-                popup.style.display = 'none';
-            }
+            popup.style.left = (x + 25) + 'px';
+            popup.style.top = (y - 40) + 'px';
+            popup.style.display = 'block';
         }
 
         function closePopup() {
@@ -345,12 +357,14 @@
             if (!osmb) return;
             closePopup(); 
             
+            // Kamera über die offizielle Methode verschieben
             osmb.setPosition({ latitude: lat, longitude: lon });
             
+            // MaxZoom (19) beachten beim automatischen Zoomen
             if (buttonId === 'bvb' || buttonId === 'tu') {
                 osmb.setZoom(15.5); 
             } else {
-                osmb.setZoom(16.5); 
+                osmb.setZoom(17); 
             }
 
             const buttons = document.querySelectorAll('.btn-group .btn-control');
@@ -358,6 +372,9 @@
             if (element) {
                 element.classList.add('active');
             }
+            
+            // Marker sofort nach dem Sprung an die neue Position heften
+            setTimeout(updateCustomMarkers, 300);
         }
 
         function toggleRotation() {
@@ -373,9 +390,10 @@
                 btn.classList.add('active');
                 btn.innerText = "Autopilot: Stoppen";
                 rotationInterval = setInterval(() => {
-                    currentRotation = (currentRotation + 0.25) % 360;
+                    currentRotation = (currentRotation + 0.2) % 360;
                     osmb.setRotation(currentRotation);
-                }, 50);
+                    updateCustomMarkers(); // Synchronisiert die HTML-Ringe während der Drehung
+                }, 40);
             }
         }
 
@@ -383,6 +401,7 @@
             if (!osmb) return;
             currentTilt = Math.max(10, Math.min(85, currentTilt + delta));
             osmb.setTilt(currentTilt);
+            setTimeout(updateCustomMarkers, 50); // Aktualisiert die Ring-Positionen nach dem Neigen
         }
     </script>
 </body>
