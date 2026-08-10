@@ -38,7 +38,7 @@
             left: 0;
         }
 
-        /* Erweitertes UI-Overlay für Steuerungselemente */
+        /* Erweitertes UI-Overlay */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -82,7 +82,6 @@
             color: #cbd5e1;
         }
 
-        /* Button-Grid-Styling */
         .btn-group {
             display: grid;
             grid-template-columns: 1fr;
@@ -141,6 +140,45 @@
             color: var(--text-color);
         }
 
+        /* Stil für das Gebäude-Info-Popup */
+        .building-popup {
+            position: absolute;
+            z-index: 2000;
+            background: #1e293b;
+            border: 2px solid var(--accent-color);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 260px;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .building-popup h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--accent-color);
+            font-size: 1rem;
+        }
+
+        .building-popup p {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            line-height: 1.3;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .popup-close:hover { color: #f8fafc; }
+
         .controls-hint {
             position: absolute;
             bottom: 20px;
@@ -172,6 +210,7 @@
                 <button class="btn-control active" onclick="jumpTo(51.51494, 7.45423, 'u', this)">Dortmunder U (Zentrum)</button>
                 <button class="btn-control" onclick="jumpTo(51.51772, 7.45929, 'hbf', this)">Hauptbahnhof Dortmund</button>
                 <button class="btn-control" onclick="jumpTo(51.49259, 7.45184, 'bvb', this)">Signal Iduna Park (Stadion)</button>
+                <button class="btn-control" onclick="jumpTo(51.49301, 7.41444, 'tu', this)">TU Dortmund (Campus Nord)</button>
             </div>
         </div>
 
@@ -193,54 +232,106 @@
         <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
     </div>
 
-    <div class="controls-hint">
-        Freie Rotation: <b>Rechte Maustaste / STRG + Ziehen</b>
+    <!-- Dynamisches HTML-Popup-Element im DOM -->
+    <div id="popup" class="building-popup">
+        <button class="popup-close" onclick="closePopup()">×</button>
+        <h4 id="popup-title">Gebäude-Info</h4>
+        <p id="popup-desc">Beschreibung</p>
+        <a id="popup-link" href="#" class="btn-control" style="display: block; font-size: 0.8rem; padding: 0.4rem; text-decoration: none;">Details öffnen</a>
     </div>
 
-    <script>
-        // Globale Variablen für Steuerungslogik
+    <div class="controls-hint">
+        Gebäude anklicken für Details | Rotation: <b>Rechtsklick + Ziehen</b>
+    </div>
+        <script>
+        // Globale Variablen
         let osmb;
         let rotationInterval = null;
         let currentRotation = 0;
         let currentTilt = 45;
 
-        // 1. Initialisiere den OSM Buildings Viewer direkt beim Laden der Seite
+        // Datenbank für die 4 Highlight-Gebäude (Zugeordnet via geografischer Nähe beim Klick)
+        const highlightBuildings = [
+            { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
+            { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
+            { id: 'bvb', name: 'Signal Iduna Park', lat: 51.49259, lon: 7.45184, desc: 'Das größte reine Fußballstadion Deutschlands und Heimat von Borussia Dortmund.', url: 'details_bvb.html' },
+            { id: 'tu', name: 'Mathetower (TU Dortmund)', lat: 51.49301, lon: 7.41444, desc: 'Das markante Hauptgebäude der Fakultät für Mathematik auf dem Campus Nord.', url: 'details_tu.html' }
+        ];
+
         window.onload = function() {
             osmb = new OSMBuildings({
                 container: 'map',
-                position: { latitude: 51.51494, longitude: 7.45423 }, // Start: Dortmund Mitte
+                position: { latitude: 51.51494, longitude: 7.45423 }, 
                 zoom: 16,
-                minZoom: 15,
+                minZoom: 14,
                 maxZoom: 22,
                 tilt: currentTilt,
                 rotation: currentRotation
             });
 
-            // Geteilte URL für die stabile 2D-Hintergrundkarte (Server a.)
-            const mapTeil1 = "https://a.tile.openstreetmap.org/";
+            const mapTeil1 = "https://openstreetmap.org";
             const mapTeil2 = "{z}/{x}/{y}.png";
             osmb.addMapTiles(mapTeil1 + mapTeil2);
 
-            // Geteilte URL für den 3D-Gebäudedaten-Stream
-            const dataTeil1 = "https://{s}.data.osmbuildings.org/0.2/";
-            const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
+            const dataTeil1 = "https://osmbuildings.org";
+            const dataTeil2 = "tile/{z}/{x}/{y}.json";
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
+
+            // Klick-Event-Handler für die 3D-Gebäude registrieren
+            osmb.on('click', function(e) {
+                if (e && e.lat && e.lon) {
+                    checkBuildingClick(e.lat, e.lon, e.x, e.y);
+                }
+            });
         };
 
-        // Funktion 1: Kamera auf neue Position zentrieren
+        // Funktion zur Erkennung, ob eines der Zielgebäude angeklickt wurde
+        function checkBuildingClick(clickLat, clickLon, screenX, screenY) {
+            // Wir suchen das Gebäude, das den Klick-Koordinaten am nächsten liegt
+            const threshold = 0.0015; 
+            let found = null;
+
+            for (let b of highlightBuildings) {
+                let d = Math.sqrt(Math.pow(b.lat - clickLat, 2) + Math.pow(b.lon - clickLon, 2));
+                if (d < threshold) {
+                    found = b;
+                    break;
+                }
+            }
+
+            const popup = document.getElementById('popup');
+            if (found) {
+                // Info-Inhalte dynamisch befüllen
+                document.getElementById('popup-title').innerText = found.name;
+                document.getElementById('popup-desc').innerText = found.desc;
+                document.getElementById('popup-link').href = found.url;
+
+                // Popup direkt an den Maus-Mittelpunkt auf dem Bildschirm heften
+                popup.style.left = (screenX + 15) + 'px';
+                popup.style.top = (screenY - 50) + 'px';
+                popup.style.display = 'block';
+            } else {
+                // Klick im leeren Raum schließt das Fenster
+                popup.style.display = 'none';
+            }
+        }
+
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
         function jumpTo(lat, lon, buttonId, element) {
             if (!osmb) return;
+            closePopup(); // Altes Popup beim Verreisen schließen
             
             osmb.setPosition({ latitude: lat, longitude: lon });
             
-            // Zoom-Stufe je nach Location anpassen
-            if (buttonId === 'bvb') {
+            if (buttonId === 'bvb' || buttonId === 'tu') {
                 osmb.setZoom(15.5); 
             } else {
                 osmb.setZoom(16.5); 
             }
 
-            // Aktiven Button-Style umschalten
             const buttons = document.querySelectorAll('.btn-group .btn-control');
             buttons.forEach(btn => btn.classList.remove('active'));
             if (element) {
@@ -248,7 +339,6 @@
             }
         }
 
-        // Funktion 2: Autopilot-Rotation umschalten
         function toggleRotation() {
             if (!osmb) return;
             const btn = document.getElementById('rotationBtn');
@@ -268,7 +358,6 @@
             }
         }
 
-        // Funktion 3: Neigungswinkel anpassen
         function changeTilt(delta) {
             if (!osmb) return;
             currentTilt = Math.max(10, Math.min(85, currentTilt + delta));
