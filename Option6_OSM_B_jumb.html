@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 6 - OSM Buildings 3D Prototyp + Interaktiv</title>
+    
+    <!-- Die Bibliotheken laden wir über die zusammengesetzten URLs im Body (unten) -->
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --card-bg: rgba(30, 41, 59, 0.9);
+            --border-color: #334155;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Erweitertes UI-Overlay für Steuerungselemente */
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .ui-overlay h1 {
+            font-size: 1.2rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--accent-color);
+        }
+
+        .ui-overlay p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin: 0 0 1rem 0;
+            line-height: 1.4;
+        }
+
+        .control-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .control-section h3 {
+            font-size: 0.9rem;
+            margin: 0 0 0.75rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #cbd5e1;
+        }
+
+        /* Button-Grid-Styling */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .btn-control {
+            background-color: #334155;
+            color: var(--text-color);
+            border: 1px solid #475569;
+            padding: 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background-color 0.2s, border-color 0.2s;
+            text-align: center;
+        }
+
+        .btn-control:hover {
+            background-color: #475569;
+            border-color: var(--accent-color);
+        }
+
+        .btn-control.active {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border-color: var(--accent-hover);
+            font-weight: 600;
+        }
+
+        .btn-back {
+            display: block;
+            background-color: #1e293b;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.6rem;
+            border-radius: 6px;
+            transition: color 0.2s, background-color 0.2s;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .btn-back:hover {
+            background-color: #334155;
+            color: var(--text-color);
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <!-- Interaktives UI Control Center -->
+    <div class="ui-overlay">
+        <h1>6. OSM Buildings Pro</h1>
+        <p>Interaktiver 3D-Viewer mit Koordinatensprüngen, Kameraperspektiven und Autopilot-Modus.</p>
+
+        <!-- Sektion 1: Sprung zu POIs -->
+        <div class="control-section">
+            <h3>Koordinaten-Sprung (Jump)</h3>
+            <div class="btn-group">
+                <button class="btn-control active" onclick="jumpTo(51.51494, 7.45423, 'u')">Dortmunder U (Zentrum)</button>
+                <button class="btn-control" onclick="jumpTo(51.51772, 7.45929, 'hbf')">Hauptbahnhof Dortmund</button>
+                <button class="btn-control" onclick="jumpTo(51.49259, 7.45184, 'bvb')">Signal Iduna Park (Stadion)</button>
+            </div>
+        </div>
+
+        <!-- Sektion 2: Autopilot (Rotation) -->
+        <div class="control-section">
+            <h3>Kamera-Rotation</h3>
+            <button id="rotationBtn" class="btn-control" style="width: 100%;" onclick="toggleRotation()">Autopilot: Starten</button>
+        </div>
+
+        <!-- Sektion 3: Manuelle Neigung (Tilt) -->
+        <div class="control-section">
+            <h3>Ansicht neigen (Tilt)</h3>
+            <div class="btn-grid-2">
+                <button class="btn-control" onclick="changeTilt(5)">Steiler (+)</button>
+                <button class="btn-control" onclick="changeTilt(-5)">Flacher (-)</button>
+            </div>
+        </div>
+
+        <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
+    </div>
+
+    <div class="controls-hint">
+        Freie Rotation: <b>Rechte Maustaste / STRG + Ziehen</b>
+    </div>
+
+    <script>
+        // TEIL 1 und TEIL 2 der offiziellen CDN-Links für die Bibliothek
+        const cdnTeil1 = "https://osmbuildings.org";
+        const cdnTeil2 = "4.0.0/OSMBuildings";
+
+        // Globale Variablen für Steuerungslogik
+        let osmb;
+        let rotationInterval = null;
+        let currentRotation = 0;
+        let currentTilt = 45;
+
+        // CSS-Datei dynamisch in den Head einfügen
+        const linkElement = document.createElement("link");
+        linkElement.rel = "stylesheet";
+        linkElement.href = cdnTeil1 + cdnTeil2 + ".css";
+        document.head.appendChild(linkElement);
+
+        // JavaScript-Datei dynamisch laden
+        const scriptElement = document.createElement("script");
+        scriptElement.src = cdnTeil1 + cdnTeil2 + ".js";
+        scriptElement.onload = function() {
+            
+            // 1. Initialisiere den OSM Buildings Viewer (v4 WebGL Standard)
+            osmb = new OSMBuildings({
+                container: 'map',
+                position: { latitude: 51.51494, longitude: 7.45423 }, // Start: Dortmund Mitte
+                zoom: 16,
+                minZoom: 14,
+                maxZoom: 22,
+                tilt: currentTilt,
+                rotation: currentRotation
+            });
+
+            // Geteilte URL für die stabile 2D-Hintergrundkarte (Server a.)
+            const mapTeil1 = "https://openstreetmap.org";
+            const mapTeil2 = "{z}/{x}/{y}.png";
+            osmb.addMapTiles(mapTeil1 + mapTeil2);
+
+            // Geteilte URL für den 3D-Gebäudedaten-Stream
+            const dataTeil1 = "https://{s}.data.osmbuildings.org/0.2/";
+            const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
+            osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
+        };
+        
+        document.body.appendChild(scriptElement);
+
+        // Funktion 1: Sprung zu vordefinierten Koordinaten
+        function jumpTo(lat, lon, buttonId) {
+            if (!osmb) return;
+            
+            // Kamera sanft auf neue Position zentrieren
+            osmb.position({ latitude: lat, longitude: lon });
+            
+            // Zoom-Stufe je nach Location für bessere Übersicht anpassen
+            if (buttonId === 'bvb') {
+                osmb.zoom(15.5); // Etwas weiter weg fürs große Stadion
+            } else {
+                osmb.zoom(16.5); // Detailansicht für City
+            }
+
+            // Aktiven Button-Style visuell umschalten
+            const buttons = document.querySelectorAll('.btn-group .btn-control');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Funktion 2: Rotation umschalten (Autopilot)
+        function toggleRotation() {
+            if (!osmb) return;
+            const btn = document.getElementById('rotationBtn');
+
+            if (rotationInterval) {
+                // Rotation stoppen
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+                btn.classList.remove('active');
+                btn.innerText = "Autopilot: Starten";
+            } else {
+                // Rotation starten (Aktualisierung alle 50 Millisekunden)
+                btn.classList.add('active');
+                btn.innerText = "Autopilot: Stoppen";
+                rotationInterval = setInterval(() => {
+                    currentRotation = (currentRotation + 0.25) % 360;
+                    osmb.rotation(currentRotation);
+                }, 50);
+            }
+        }
+
+        // Funktion 3: Neigungswinkel anpassen
+        function changeTilt(delta) {
+            if (!osmb) return;
+            // Errechne neuen Tilt-Wert innerhalb der sinnvollen Grenzen von 10 bis 85 Grad
+            currentTilt = Math.max(10, Math.min(85, currentTilt + delta));
+            osmb.tilt(currentTilt);
+        }
+    </script>
+</body>
+</html>
