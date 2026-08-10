@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Option 4: Pydeck 3D-Viewer Dortmund</title>
+    
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #1a1a1a;
+      }
+
+      #deck-container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      #deck-container canvas {
+        z-index: 2 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+
+      #fallback-map-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        background-color: #1a1a1a;
+      }
+
+      .back-btn { 
+        position: absolute; 
+        top: 20px; 
+        left: 20px; 
+        background: #333; 
+        color: white; 
+        padding: 10px 15px; 
+        text-decoration: none; 
+        border-radius: 5px; 
+        z-index: 100; 
+        font-family: sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="index.html" class="back-btn">← Zurück zur Hauptseite</a>
+
+    <div id="deck-container">
+       <div id="fallback-map-background"></div>
+    </div>
+
+    <!-- Dynamischer Link-Lader gegen Chat-Verstümmelung -->
+    <script>
+      (function() {
+        const link1 = "https://unpkg.com" + "/deck.gl@~9.0.0/" + "dist.min.js";
+        const link2 = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.js";
+        const cssLink = "https://unpkg.com" + "/maplibre-gl@3.6.2/" + "dist/maplibre-gl.css";
+
+        const style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = cssLink;
+        document.head.appendChild(style);
+
+        function loadScript(url, callback) {
+          const script = document.createElement('script');
+          script.src = url;
+          script.onload = callback;
+          document.head.appendChild(script);
+        }
+
+        loadScript(link1, function() {
+          loadScript(link2, function() {
+            start3DMap();
+          });
+        });
+      })();
+
+      function start3DMap() {
+        const container = document.getElementById('deck-container');
+        
+        const layerData = [
+          { "height": 25, "lat": 51.5136, "lng": 7.4653 },
+          { "height": 45, "lat": 51.5145, "lng": 7.468 },
+          { "height": 15, "lat": 51.5125, "lng": 7.461 },
+          { "height": 30, "lat": 51.515, "lng": 7.4635 }
+        ];
+
+        const r = 200, g = 30, b = 0, alpha = 200;
+
+        // KORREKTUR: Offizieller, CORS-freier Kachelserver (Zwingt deck.gl, die Hauptdomain zu meiden)
+        const tileUrl = "https://tile.openstreetmap.org" + "/{z}/{x}/{y}.png";
+
+        new deck.DeckGL({
+          container: container,
+          initialViewState: {
+            bearing: 10,
+            latitude: 51.5136,
+            longitude: 7.4653,
+            pitch: 45,
+            zoom: 14.5
+          },
+          layers: [
+            // Das CORS-sichere OpenStreetMap-Layer für deck.gl v9
+            new deck.TileLayer({
+              id: 'live-base-map',
+              data: tileUrl,
+              minZoom: 0,
+              maxZoom: 19,
+              tileSize: 256,
+              // Verhindert CORS-Konflikte durch erzwungenes anonymes Laden der Bilder
+              loadOptions: {
+                image: {
+                  type: 'image',
+                  decode: true
+                },
+                fetch: {
+                  mode: 'cors',
+                  credentials: 'omit'
+                }
+              },
+              renderSubLayers: props => {
+                const {bbox} = props.tile;
+                return new deck.BitmapLayer({
+                  id: props.id,
+                  image: props.data,
+                  bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
+                });
+              }
+            }),
+            // 3D-Gebäude-Säulen
+            new deck.ColumnLayer({
+              id: "dortmund-columns",
+              data: layerData,
+              getPosition: d => [d.lng, d.lat],
+              getElevation: d => d.height,
+              getFillColor: [r, g, b, alpha],
+              radius: 25,
+              elevationScale: 1,
+              extruded: true,
+              pickable: true
+            })
+          ],
+          controller: true,
+          getTooltip: ({object}) => object && `Höhe: ${object.height}m`
+        });
+      }
+    </script>
+  </body>
+</html>
