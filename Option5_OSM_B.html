@@ -131,14 +131,18 @@
                 maxZoom: 22
             });
 
-            // Basiskarte laden (Hintergrund-Kacheln)
-            osmb.addMapTiles('https://openstreetmap.org{z}/{x}/{y}.png');
+            // KORREKTUR: Zerlegung der 2D-Hintergrundkarte zur Vermeidung von Kürzungsfehlern (org16...)
+            const mapTeil1 = "https://{s}.tile.openstreetmap.org/";
+            const mapTeil2 = "{z}/{x}/{y}.png";
 
-            // KORREKTUR: Explizites 'https:' für den Web Worker, kombiniert mit dem offiziellen API-Token
+            // Fügt die Teile fehlerfrei zu 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' zusammen
+            osmb.addMapTiles(mapTeil1 + mapTeil2);
+
+            // Die funktionierende URL-Zerlegung für die 3D-Kacheln
             const dataTeil1 = "https://{s}.data.osmbuildings.org/0.2/";
             const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
 
-            // Führt die Teile fehlerfrei zu 'https://{s}.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json' zusammen
+            // Lädt die 3D-Gebäude
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
         };
         
