@@ -132,13 +132,13 @@
             });
 
             // Basiskarte laden (Hintergrund-Kacheln)
-            osmb.addMapTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+            osmb.addMapTiles('https://openstreetmap.org{z}/{x}/{y}.png');
 
-            // KORREKTUR: Protokoll-relativer Link mit dem vom Server geforderten Subdomain-Splitter
-            const dataTeil1 = "//{s}.data.osmbuildings.org/0.2/";
-            const dataTeil2 = "anonymous/tile/{z}/{x}/{y}.json";
+            // KORREKTUR: Explizites 'https:' für den Web Worker, kombiniert mit dem offiziellen API-Token
+            const dataTeil1 = "https://{s}.data.osmbuildings.org/0.2/";
+            const dataTeil2 = "59fcc2e8/tile/{z}/{x}/{y}.json";
 
-            // Führt die Teile zu '//{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json' zusammen
+            // Führt die Teile fehlerfrei zu 'https://{s}.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json' zusammen
             osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
         };
         
