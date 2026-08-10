@@ -122,27 +122,25 @@
         scriptElement.src = cdnTeil1 + cdnTeil2 + ".js";
         scriptElement.onload = function() {
             
-            // 1. Initialisiere den OSM Buildings Viewer
+            // 1. Initialisiere den OSM Buildings Viewer (v4 WebGL Standard)
             const osmb = new OSMBuildings({
                 container: 'map',
-                position: { latitude: 51.51494, longitude: 7.45423 }, // Dortmund Mitte
+                position: { latitude: 51.51494, longitude: 7.45423 }, // Dortmund Mitte (Dortmunder U)
                 zoom: 16,
-                tilt: 45,
-                rotation: 0
+                minZoom: 15,
+                maxZoom: 22
             });
 
-            // Basiskarte laden (Hintergrund-Kacheln ohne fehlerhafte {s}-Subdomain)
+            // Basiskarte laden (Hintergrund-Kacheln ohne den fehlerhaften {s}-Subdomain-Filter)
             osmb.addMapTiles('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 
-            // KORREKTUR: TEIL 1 und TEIL 2 für den modernen 3D-Vektor-Stream zerlegen
-            const dataTeil1 = "https://osmbuildings.org";
-            const dataTeil2 = "anonymous/tile/{z}/{x}/{y}.pbf";
+            // KORREKTUR: Die exakte URL-Zerlegung für die 3D-Kacheln laut Dokumentation
+            const dataTeil1 = "https://a.data.osmbuildings.org/0.2/";
+            const dataTeil2 = "anonymous/tile/{z}/{x}/{y}.json";
 
-            // KORREKTUR: 'addData' mit der .pbf-Dateiendung verwenden. 
-            // Die Engine der Version 4.0.0 benötigt dieses Vektor-Format für 3D-Geometrien.
-            osmb.addData(dataTeil1 + dataTeil2);
-
-            // HINWEIS: osmb.date() wurde entfernt, da die Funktion in Version 4.0.0 nicht mehr existiert.
+            // KORREKTUR: Verwendet die offizielle v4-Methode 'addGeoJSONTiles' 
+            // mit der korrekten '.json'-Endung, damit die 3D-Gebäude geladen werden.
+            osmb.addGeoJSONTiles(dataTeil1 + dataTeil2);
         };
         
         document.body.appendChild(scriptElement);
