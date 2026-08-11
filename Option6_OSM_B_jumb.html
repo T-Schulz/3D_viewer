@@ -62,7 +62,6 @@
         .control-section { border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem; }
         .control-section h3 { font-size: 0.85rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
         
-        /* NEU: Zoom-Live-Anzeige-Box */
         .zoom-display {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid #38bdf8;
@@ -143,12 +142,12 @@
 
     <div class="ui-overlay">
         <h1>6. OSM 3D Pro</h1>
-        <p>Interaktiver deck.gl-Viewer mit Live-Debug-Werten und erhöhten Zoom-Schwellenwerten.</p>
+        <p>Interaktiver deck.gl-Viewer mit Live-Debug-Werten und korrigierten Zoomstufen (11 bis 15).</p>
 
-        <!-- NEU: Live-Zoom-Anzeige im Dokument -->
+        <!-- Live-Zoom-Anzeige -->
         <div class="zoom-display">
             <span>AKTUELLER ZOOM:</span>
-            <span id="zoom-value">18.50</span>
+            <span id="zoom-value">13.00</span>
         </div>
 
         <div class="control-section">
@@ -211,16 +210,16 @@
         let rotationInterval = null;
         let hoveredObjectId = null; // Speichert das aktuell berührte Gebäude für den Farbwechsel
         
-        // KORREKTUR: Alle Zoom-Werte um genau Faktor 2 angehoben!
-        // Startwert liegt bei 18.5, Untergrenze bei 17.0 und Obergrenze bei 21.0
+        // KORREKTUR: Zoom-Faktoren in die richtige Richtung angepasst!
+        // Startwert liegt bei 13.0, die Untergrenze bei 11.0 und die Obergrenze bei 15.0
         let viewState = {
             latitude: 51.51494,
             longitude: 7.45423,
-            zoom: 18.5,     // KORREKTUR: Erhöht um 2
+            zoom: 13,       // KORREKTUR: Optimaler Start-Korridor für 3D-Vektoren
             pitch: 45,      // Neigungswinkel (Tilt)
             bearing: 0,     // Rotationswinkel
-            maxZoom: 21,    // KORREKTUR: Erhöht um 2
-            minZoom: 17     // KORREKTUR: Erhöht um 2 (Zwingt die 3D-Häuser zur permanenten Sichtbarkeit)
+            maxZoom: 15,    // KORREKTUR: Verhindert zu nahes Heranzommen ohne Daten
+            minZoom: 11     // KORREKTUR: Verriegelt das weite Rauszoomen
         };
 
         // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
@@ -253,7 +252,7 @@
                     deckgl.setProps({viewState: viewState});
                     closePopup(); 
                     
-                    // NEU: Live-Anzeige der Zoomstufe auf 2 Nachkommastellen runden
+                    // Live-Anzeige der Zoomstufe aktualisieren
                     document.getElementById('zoom-value').innerText = viewState.zoom.toFixed(2);
                 },
 
@@ -306,8 +305,8 @@
                 new deck.TileLayer({
                     id: 'osm-3d-buildings',
                     data: buildings3DUrl,
-                    minZoom: 14, 
-                    maxZoom: 21, // KORREKTUR: Obergrenze angehoben auf 21
+                    minZoom: 10, // KORREKTUR: minZoom auf 10 abgesenkt, damit die Häuser permanent sichtbar sind
+                    maxZoom: 16, // KORREKTUR: maxZoom auf 16 fixiert
                     onTileError: () => {}, 
                     renderSubLayers: props => {
                         return new deck.GeoJsonLayer({
@@ -333,16 +332,16 @@
                     id: "dortmund-columns",
                     data: highlightBuildings,
                     getPosition: d => [d.lon, d.lat],
-                    getElevation: d => d.height,
+                    getElevation: d => d.height * 2.5, // KORREKTUR: Erhöht, damit sie im neuen Zoom-Faktor gut sichtbar sind
                     
                     // Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
-                    getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, 255] : [r, g, b, alpha],
+                    getFillColor: d => d.id === hoveredObjectId ? : [r, g, b, alpha],
                     
                     updateTriggers: {
                         getFillColor: [hoveredObjectId]
                     },
                     
-                    radius: 20,                
+                    radius: 40, // KORREKTUR: Radius leicht vergrößert für bessere Sichtbarkeit aus der Distanz               
                     extruded: true,
                     pickable: true,            
                     onClick: (info) => {
@@ -369,7 +368,7 @@
             document.getElementById('popup').style.display = 'none';
         }
 
-        // KORREKTUR: Zoomstufe einheitlich um den Faktor 2 auf 18.5 erhöht
+        // KORREKTUR: Zoomstufe einheitlich auf den optimalen Vektor-Korridor 13.0 gesetzt
         function jumpTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -377,17 +376,17 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 18.5, // KORREKTUR: Einheitlicher, erhöhter Detail-Zoom
-                transitionDuration: 0 // Sofortiger Wechsel ohne Animation
+                zoom: 13.0, // KORREKTUR: Fester, optimaler Zoomwert für sofortige 3D-Sicht
+                transitionDuration: 0 // Sofortiger Wechsel ohne Verzögerung
             };
             deckgl.setProps({viewState: viewState});
             updateActiveButton(element);
             
-            // Debug-Anzeige manuell aktualisieren, da onViewStateChange bei harten Jumps nicht feuert
+            // Debug-Anzeige manuell aktualisieren
             document.getElementById('zoom-value').innerText = viewState.zoom.toFixed(2);
         }
 
-        // KORREKTUR: Fly-To Fluganimation auf die feste Stufe 18.5 fixiert
+        // KORREKTUR: Fly-To Fluganimation landet nun exakt auf der stabilen 3D-Stufe 13.0
         function flyTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -395,10 +394,9 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 18.5, // KORREKTUR: Garantiert die dauerhafte Sichtbarkeit der 3D-Häuser nach dem Flug
-                // Nutzt den eingebauten FlyToInterpolator von deck.gl für sanftes Gleiten
+                zoom: 13.0, // KORREKTUR: Garantiert die dauerhafte Sichtbarkeit der 3D-Häuser nach dem Flug
                 transitionInterpolator: new deck.FlyToInterpolator({speed: 1.2}),
-                transitionDuration: 'auto' // Errechnet die Dauer passend zur Entfernung
+                transitionDuration: 'auto'
             };
             deckgl.setProps({viewState: viewState});
             updateActiveButton(element);
