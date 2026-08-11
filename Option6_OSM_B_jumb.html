@@ -41,7 +41,6 @@
             left: 0;
         }
 
-        /* Erweitertes UI-Overlay mit mehr Platz für die 3-Teilung */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -63,7 +62,6 @@
         .control-section { border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem; }
         .control-section h3 { font-size: 0.85rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
         
-        /* Das dreigeteilte Grid-System für die Zeilen */
         .poi-row {
             display: grid;
             grid-template-columns: auto 1fr auto;
@@ -93,7 +91,6 @@
         .btn-control:hover { background-color: #475569; border-color: var(--accent-color); }
         .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); }
 
-        /* Grüner Stil für den Fly-To Button */
         .btn-fly {
             background-color: var(--btn-fly); color: white; border: 1px solid #22c55e;
         }
@@ -132,34 +129,29 @@
 
     <div class="ui-overlay">
         <h1>6. OSM 3D Pro</h1>
-        <p>Interaktiver deck.gl-Viewer mit 3-Teilung, Fly-To-Animation und Rotfärbung bei Berührung.</p>
+        <p>Interaktiver deck.gl-Viewer mit 3-Teilung, Fly-To-Animation und automatischer 3D-Vorladung.</p>
 
-        <!-- Sektion 1: Dreigeteiltes Navigationsmenü -->
         <div class="control-section">
             <h3>Standort-Navigation (3-Teilung)</h3>
             
-            <!-- Zeile 1: Dortmunder U -->
             <div class="poi-row">
                 <button class="btn-control active poi-jump-btn" onclick="jumpTo(51.51494, 7.45423, 'u', this)">Jump</button>
                 <div class="poi-name">Dortmunder U</div>
                 <button class="btn-control btn-fly" onclick="flyTo(51.51494, 7.45423, 'u', this)">Fly-To</button>
             </div>
 
-            <!-- Zeile 2: Hauptbahnhof -->
             <div class="poi-row">
                 <button class="btn-control poi-jump-btn" onclick="jumpTo(51.51772, 7.45929, 'hbf', this)">Jump</button>
                 <div class="poi-name">Hauptbahnhof</div>
                 <button class="btn-control btn-fly" onclick="flyTo(51.51772, 7.45929, 'hbf', this)">Fly-To</button>
             </div>
 
-            <!-- Zeile 3: Signal Iduna Park -->
             <div class="poi-row">
                 <button class="btn-control poi-jump-btn" onclick="jumpTo(51.49259, 7.45184, 'bvb', this)">Jump</button>
                 <div class="poi-name">Signal Iduna Park</div>
                 <button class="btn-control btn-fly" onclick="flyTo(51.49259, 7.45184, 'bvb', this)">Fly-To</button>
             </div>
 
-            <!-- Zeile 4: TU Dortmund -->
             <div class="poi-row">
                 <button class="btn-control poi-jump-btn" onclick="jumpTo(51.49301, 7.41444, 'tu', this)">Jump</button>
                 <div class="poi-name">TU Dortmund</div>
@@ -199,15 +191,16 @@
         let rotationInterval = null;
         let hoveredObjectId = null; // Speichert das aktuell berührte Gebäude für den Farbwechsel
         
-        // KORREKTUR: Zoom einheitlich auf 17 gesetzt, minZoom auf 15 und maxZoom auf 19 festgenagelt
+        // KORREKTUR: Start-Zoom auf 16.5 und Mindest-Stufe auf 15.2 hochgesetzt, 
+        // damit 3D-Gebäude am Start und beim Laden sofort sichtbar sind.
         let viewState = {
             latitude: 51.51494,
             longitude: 7.45423,
-            zoom: 17,
+            zoom: 16.5,     // KORREKTUR: Optimaler Startwert
             pitch: 45,      // Neigungswinkel (Tilt)
             bearing: 0,     // Rotationswinkel
-            maxZoom: 19,    // KORREKTUR: Obergrenze
-            minZoom: 15     // KORREKTUR: Untergrenze (Verhindert Verschwinden der 3D-Gebäude)
+            maxZoom: 19,
+            minZoom: 15.2   // KORREKTUR: Verriegelt das Rauszoomen über der 3D-Sichtgrenze
         };
 
         // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
@@ -240,19 +233,19 @@
                     closePopup(); 
                 },
 
-                // KORREKTUR: Dynamischer Hover-Effekt mit sofortiger Shader-Aktualisierung
+                // Dynamischer Hover-Effekt (Farbwechsel Blau -> Rot)
                 onHover: (info) => {
                     if (info && info.object && info.object.url) {
                         container.style.cursor = 'pointer';
                         if (hoveredObjectId !== info.object.id) {
                             hoveredObjectId = info.object.id;
-                            deckgl.setProps({layers: buildLayers()}); // Erzwingt das Neuzeichnen der Ebenen
+                            deckgl.setProps({layers: buildLayers()}); // Layer neu zeichnen mit neuer Farbe
                         }
                     } else {
                         container.style.cursor = 'default';
                         if (hoveredObjectId !== null) {
                             hoveredObjectId = null;
-                            deckgl.setProps({layers: buildLayers()}); // Setzt die Farbe wieder zurück
+                            deckgl.setProps({layers: buildLayers()}); // Layer zurücksetzen auf Blau
                         }
                     }
                 },
@@ -291,7 +284,7 @@
                     data: buildings3DUrl,
                     minZoom: 14, 
                     maxZoom: 19,
-                    onTileError: () => {}, 
+                    onTileError: () => {}, // Fängt den 400er-Fehler beim Scrollen stumm ab
                     renderSubLayers: props => {
                         return new deck.GeoJsonLayer({
                             id: props.id,
@@ -311,17 +304,16 @@
                     }
                 }),
                 
-                // Ebene 3: Die interaktiven 3D-Säulen mit Hover-Farbwechsel
+                // Ebene 3: Die interaktiven 3D-Highlight-Säulen mit Hover-Farbwechsel
                 new deck.ColumnLayer({
                     id: "dortmund-columns",
                     data: highlightBuildings,
                     getPosition: d => [d.lon, d.lat],
                     getElevation: d => d.height,
                     
-                    // KORREKTUR: Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig BLAU [r, g, b]
+                    // Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
                     getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, 240] : [r, g, b, alpha],
                     
-                    // KORREKTUR: updateTriggers teilt deck.gl mit, dass es bei einer ID-Änderung die Farbe neu berechnen MUSS
                     updateTriggers: {
                         getFillColor: [hoveredObjectId]
                     },
@@ -353,7 +345,7 @@
             document.getElementById('popup').style.display = 'none';
         }
 
-        // KORREKTUR: Zoomstufe einheitlich auf 17 gesetzt, damit 3D-Gebäude nicht verschwinden
+        // KORREKTUR: Zoomstufe auf 16.5 angepasst, damit die 3D-Gebäude beim Teleportieren sofort laden
         function jumpTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -361,14 +353,14 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 17, // KORREKTUR: Einheitlicher Detail-Zoom
-                transitionDuration: 0 // Sofortiger Wechsel ohne Animation
+                zoom: 16.5, // KORREKTUR: Fester, optimaler Zoomwert für sofortige Vektor-Ladung
+                transitionDuration: 0 // Sofortiger Wechsel ohne Verzögerung
             };
             deckgl.setProps({viewState: viewState});
             updateActiveButton(element);
         }
 
-        // KORREKTUR: Fly-To Fluganimation auf die feste Zoomstufe 17 angepasst
+        // KORREKTUR: Fly-To Fluganimation auf die feste Stufe 16.5 fixiert, um Verschwinden zu verhindern
         function flyTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -376,7 +368,7 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 17, // KORREKTUR: Einheitlicher Detail-Zoom für perfekten 3D-Blick
+                zoom: 16.5, // KORREKTUR: Garantiert die dauerhafte Sichtbarkeit der 3D-Häuser nach dem Flug
                 // Nutzt den eingebauten FlyToInterpolator von deck.gl für sanftes Gleiten
                 transitionInterpolator: new deck.FlyToInterpolator({speed: 1.2}),
                 transitionDuration: 'auto' // Errechnet die Dauer passend zur Entfernung
@@ -387,11 +379,9 @@
 
         // Hilfsfunktion zum Umschalten der Button-Aktivierung im CSS
         function updateActiveButton(clickedElement) {
-            // Setzt alle Jump-Buttons zurück
             const jumpButtons = document.querySelectorAll('.poi-jump-btn');
             jumpButtons.forEach(btn => btn.classList.remove('active'));
             
-            // Wenn es ein Jump-Button war, färbe ihn blau
             if (clickedElement && clickedElement.classList.contains('poi-jump-btn')) {
                 clickedElement.classList.add('active');
             }
