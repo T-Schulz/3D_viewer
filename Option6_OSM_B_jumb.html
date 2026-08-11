@@ -334,8 +334,8 @@
                     getPosition: d => [d.lon, d.lat],
                     getElevation: d => d.height * 2.5, // KORREKTUR: Erhöht, damit sie im neuen Zoom-Faktor gut sichtbar sind
                     
-                    // Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
-                    getFillColor: d => d.id === hoveredObjectId ? : [r, g, b, alpha],
+                    // KORREKTUR: Wenn berührt (hovered), färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
+                    getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, alpha] : [r, g, b, alpha],
                     
                     updateTriggers: {
                         getFillColor: [hoveredObjectId]
