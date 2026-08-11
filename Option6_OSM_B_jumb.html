@@ -16,8 +16,10 @@
             --text-color: #f8fafc;
             --accent-color: #38bdf8;
             --accent-hover: #0ea5e9;
-            --card-bg: rgba(30, 41, 59, 0.9);
+            --card-bg: rgba(30, 41, 59, 0.95);
             --border-color: #334155;
+            --btn-fly: #22c55e;
+            --btn-fly-hover: #16a34a;
         }
 
         html, body {
@@ -31,7 +33,6 @@
             color: var(--text-color);
         }
 
-        /* Der Kartencontainer für deck.gl */
         #deck-container {
             width: 100%;
             height: 100%;
@@ -40,7 +41,7 @@
             left: 0;
         }
 
-        /* Erweitertes UI-Overlay aus Option 6 */
+        /* Erweitertes UI-Overlay mit mehr Platz für die 3-Teilung */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -50,7 +51,7 @@
             border: 1px solid var(--border-color);
             padding: 1.5rem;
             border-radius: 12px;
-            width: 320px;
+            width: 380px; /* Leicht verbreitert für die Buttons */
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
             max-height: 90vh;
@@ -60,18 +61,45 @@
         .ui-overlay h1 { font-size: 1.2rem; margin: 0 0 0.5rem 0; color: var(--accent-color); }
         .ui-overlay p { font-size: 0.85rem; color: #94a3b8; margin: 0 0 1rem 0; line-height: 1.4; }
         .control-section { border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem; }
-        .control-section h3 { font-size: 0.9rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
+        .control-section h3 { font-size: 0.85rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
         
-        .btn-group { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
-        .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        /* Das dreigeteilte Grid-System für die Zeilen */
+        .poi-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid #1e293b;
+        }
+
+        .poi-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         
         .btn-control {
             background-color: #334155; color: var(--text-color); border: 1px solid #475569;
-            padding: 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
-            font-weight: 500; transition: background-color 0.2s, border-color 0.2s; text-align: center;
+            padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+            font-weight: 600; transition: all 0.2s ease; text-align: center;
         }
         .btn-control:hover { background-color: #475569; border-color: var(--accent-color); }
-        .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); font-weight: 600; }
+        .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); }
+
+        /* Grüner Stil für den Fly-To Button */
+        .btn-fly {
+            background-color: #16a34a; color: white; border: 1px solid #22c55e;
+        }
+        .btn-fly:hover { background-color: #15803d; border-color: #4ade80; }
+
+        .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 
         .btn-back {
             display: block; background-color: #1e293b; color: #94a3b8; text-decoration: none;
@@ -80,7 +108,6 @@
         }
         .btn-back:hover { background-color: #334155; color: var(--text-color); }
 
-        /* Das Info-Unterfenster aus Option 6 */
         .building-popup {
             position: absolute; z-index: 2000; background: #1e293b; border: 2px solid var(--accent-color);
             padding: 1rem; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
@@ -101,21 +128,42 @@
 </head>
 <body>
 
-    <!-- Der deck.gl Container aus Option 4 -->
     <div id="deck-container"></div>
 
-    <!-- Das Steuerungsmenü aus Option 6 -->
     <div class="ui-overlay">
         <h1>6. OSM 3D Pro</h1>
-        <p>Interaktiver deck.gl-Viewer mit funktionierender Maus-Interaktion und Jump-Funktion.</p>
+        <p>Interaktiver deck.gl-Viewer mit 3-Teilung, Fly-To-Animation und Rotfärbung bei Berührung.</p>
 
+        <!-- Sektion 1: Dreigeteiltes Navigationsmenü -->
         <div class="control-section">
-            <h3>Koordinaten-Sprung (Jump)</h3>
-            <div class="btn-group">
-                <button class="btn-control active" onclick="jumpTo(51.51494, 7.45423, 'u', this)">Dortmunder U (Zentrum)</button>
-                <button class="btn-control" onclick="jumpTo(51.51772, 7.45929, 'hbf', this)">Hauptbahnhof Dortmund</button>
-                <button class="btn-control" onclick="jumpTo(51.49259, 7.45184, 'bvb', this)">Signal Iduna Park (Stadion)</button>
-                <button class="btn-control" onclick="jumpTo(51.49301, 7.41444, 'tu', this)">TU Dortmund (Campus Nord)</button>
+            <h3>Standort-Navigation (3-Teilung)</h3>
+            
+            <!-- Zeile 1: Dortmunder U -->
+            <div class="poi-row">
+                <button class="btn-control active poi-jump-btn" onclick="jumpTo(51.51494, 7.45423, 'u', this)">Jump</button>
+                <div class="poi-name">Dortmunder U</div>
+                <button class="btn-control btn-fly" onclick="flyTo(51.51494, 7.45423, 'u', this)">Fly-To</button>
+            </div>
+
+            <!-- Zeile 2: Hauptbahnhof -->
+            <div class="poi-row">
+                <button class="btn-control poi-jump-btn" onclick="jumpTo(51.51772, 7.45929, 'hbf', this)">Jump</button>
+                <div class="poi-name">Hauptbahnhof</div>
+                <button class="btn-control btn-fly" onclick="flyTo(51.51772, 7.45929, 'hbf', this)">Fly-To</button>
+            </div>
+
+            <!-- Zeile 3: Signal Iduna Park -->
+            <div class="poi-row">
+                <button class="btn-control poi-jump-btn" onclick="jumpTo(51.49259, 7.45184, 'bvb', this)">Jump</button>
+                <div class="poi-name">Signal Iduna Park</div>
+                <button class="btn-control btn-fly" onclick="flyTo(51.49259, 7.45184, 'bvb', this)">Fly-To</button>
+            </div>
+
+            <!-- Zeile 4: TU Dortmund -->
+            <div class="poi-row">
+                <button class="btn-control poi-jump-btn" onclick="jumpTo(51.49301, 7.41444, 'tu', this)">Jump</button>
+                <div class="poi-name">TU Dortmund</div>
+                <button class="btn-control btn-fly" onclick="flyTo(51.49301, 7.41444, 'tu', this)">Fly-To</button>
             </div>
         </div>
 
@@ -135,7 +183,6 @@
         <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
     </div>
 
-    <!-- Das interaktive Popup aus Option 6 -->
     <div id="popup" class="building-popup">
         <button class="popup-close" onclick="closePopup()">×</button>
         <h4 id="popup-title">Gebäude-Info</h4>
@@ -144,22 +191,23 @@
     </div>
 
     <div class="controls-hint">
-        3D-Säule anklicken für Details | Mausberührung zeigt Reaktion
+        Säule berühren (Farbe wechselt!) | Linksklick öffnet Popup
     </div>
-    <script>
+        <script>
         // Globale Variablen für Steuerungslogik und Kartenstatus
         let deckgl;
         let rotationInterval = null;
+        let hoveredObjectId = null; // Speichert das aktuell berührte Gebäude für den Farbwechsel
         
         // Zentraler Kamerastatus (ViewState), den deck.gl benötigt
         let viewState = {
             latitude: 51.51494,
             longitude: 7.45423,
-            zoom: 17,
+            zoom: 16,
             pitch: 45,      // Neigungswinkel (Tilt)
             bearing: 0,     // Rotationswinkel
             maxZoom: 19,
-            minZoom: 15
+            minZoom: 13
         };
 
         // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
@@ -180,15 +228,10 @@
 
         function initDeckGL() {
             const container = document.getElementById('deck-container');
-            const tileUrl = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-            // NEU: API-Link zu den globalen, freien 3D-Gebäude-Vektorkacheln (OSM Buildings MVT-Schnittstelle)
-            // Diese Kacheln liefern die 3D-Häuserstrukturen direkt für deck.gl
-            const buildings3DUrl = "https://a.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json";
 
             deckgl = new deck.DeckGL({
                 container: container,
-                initialViewState: viewState,
+                viewState: viewState, // Nutzt die reaktive Bindung statt initialViewState für Animationen
                 controller: true, 
                 
                 onViewStateChange: ({viewState: nextViewState}) => {
@@ -197,84 +240,100 @@
                     closePopup(); 
                 },
 
-                onHover: ({object}) => {
-                    // Ändert den Cursor nur, wenn wir eine unserer interaktiven Säulen berühren (erkennbar am Feld 'url')
-                    container.style.cursor = (object && object.url) ? 'pointer' : 'default';
+                // Dynamischer Hover-Effekt (Farbwechsel Blau -> Rot)
+                onHover: (info) => {
+                    if (info && info.object && info.object.url) {
+                        // Maus berührt eine Highlightsäule
+                        container.style.cursor = 'pointer';
+                        if (hoveredObjectId !== info.object.id) {
+                            hoveredObjectId = info.object.id;
+                            deckgl.setProps({layers: buildLayers()}); // Layer neu zeichnen mit neuer Farbe
+                        }
+                    } else {
+                        // Maus verlässt die Säule
+                        container.style.cursor = 'default';
+                        if (hoveredObjectId !== null) {
+                            hoveredObjectId = null;
+                            deckgl.setProps({layers: buildLayers()}); // Layer zurücksetzen auf Blau
+                        }
+                    }
                 },
 
-                layers: [
-                    // Ebene 1: Die CORS-sichere 2D-Hintergrundkarte
-                    new deck.TileLayer({
-                        id: 'live-base-map',
-                        data: tileUrl,
-                        minZoom: 15,
-                        maxZoom: 19,
-                        tileSize: 256,
-                        loadOptions: {
-                            image: { type: 'image', decode: true }
-                        },
-                        renderSubLayers: props => {
-                            const {bbox} = props.tile;
-                            return new deck.BitmapLayer({
-                                id: props.id,
-                                image: props.data,
-                                bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
-                            });
-                        }
-                    }),
-                    
-                    // Ebene 2: Der 3D-Gebäude-Layer mit den ORIGINALEN, abwechslungsreichen OSM-Farben
-                    new deck.TileLayer({
-                        id: 'osm-3d-buildings',
-                        data: buildings3DUrl,
-                        minZoom: 15, 
-                        maxZoom: 19,
-                        onTileError: () => {}, // KORREKTUR: Fängt den 400er-Fehler beim Scrollen stumm ab
-                        renderSubLayers: props => {
-                            return new deck.GeoJsonLayer({
-                                id: props.id,
-                                data: props.data,
-                                extruded: true,                    
-                                wireframe: false,
-                                getElevation: f => f.properties.height || f.properties.levels * 3 || 15, 
-                                
-                                // KORREKTUR: Liest die originale Farbe aus den OSM-Daten aus
-                                // Falls keine Farbe definiert ist, wird ein Standard-Grau [220, 225, 230] genutzt
-                                getFillColor: f => {
-                                    const hexColor = f.properties.color || f.properties.roofColor || "#dcdee6";
-                                    return hexToRgb(hexColor, 160); // 160 ist die Transparenz (Alpha: 0-255)
-                                },
-                                
-                                // Dezent dunklere Konturlinien für plastischere Tiefenwirkung
-                                getLineColor: f => {
-                                    const hexColor = f.properties.color || "#94a3b8";
-                                    return hexToRgb(hexColor, 255);
-                                }
-                            });
-                        }
-                    }),
-                    
-                    // Ebene 3: Ihre interaktiven 3D-Highlight-Säulen
-                    // Liegen ganz oben, damit sie aus den Dächern heraufragen
-                    new deck.ColumnLayer({
-                        id: "dortmund-columns",
-                        data: highlightBuildings,
-                        getPosition: d => [d.lon, d.lat],
-                        getElevation: d => d.height,
-                        getFillColor: [r, g, b, alpha],
-                        radius: 20,                
-                        extruded: true,
-                        pickable: true,            
-                        onClick: (info) => {
-                            if (info && info.object && info.object.url) {
-                                openBuildingPopup(info.object, info.x, info.y);
-                            }
-                        }
-                    })
-                ]
+                layers: buildLayers()
             });
         }
 
+        // Hilfsfunktion zum dynamischen Generieren der Layer (wichtig für die Farbänderung zur Laufzeit)
+        function buildLayers() {
+            const tileUrl = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png";
+            const buildings3DUrl = "https://a.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json";
+
+            return [
+                // Ebene 1: Die 2D-Hintergrundkarte
+                new deck.TileLayer({
+                    id: 'live-base-map',
+                    data: tileUrl,
+                    minZoom: 0,
+                    maxZoom: 19,
+                    tileSize: 256,
+                    loadOptions: { image: { type: 'image', decode: true } },
+                    renderSubLayers: props => {
+                        const {bbox} = props.tile;
+                        return new deck.BitmapLayer({
+                            id: props.id,
+                            image: props.data,
+                            bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
+                        });
+                    }
+                }),
+                
+                // Ebene 2: Der 3D-Gebäude-Layer mit Stummschaltung und Originalfarben
+                new deck.TileLayer({
+                    id: 'osm-3d-buildings',
+                    data: buildings3DUrl,
+                    minZoom: 14, 
+                    maxZoom: 19,
+                    onTileError: () => {}, // Fängt den 400er-Fehler beim Scrollen stumm ab
+                    renderSubLayers: props => {
+                        return new deck.GeoJsonLayer({
+                            id: props.id,
+                            data: props.data,
+                            extruded: true,                    
+                            wireframe: false,
+                            getElevation: f => f.properties.height || f.properties.levels * 3 || 15, 
+                            getFillColor: f => {
+                                const hexColor = f.properties.color || f.properties.roofColor || "#dcdee6";
+                                return hexToRgb(hexColor, 160);
+                            },
+                            getLineColor: f => {
+                                const hexColor = f.properties.color || "#94a3b8";
+                                return hexToRgb(hexColor, 255);
+                            }
+                        });
+                    }
+                }),
+                
+                // Ebene 3: Die interaktiven 3D-Highlight-Säulen mit Hover-Farbwechsel
+                new deck.ColumnLayer({
+                    id: "dortmund-columns",
+                    data: highlightBuildings,
+                    getPosition: d => [d.lon, d.lat],
+                    getElevation: d => d.height,
+                    
+                    // Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
+                    getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, 240] : [r, g, b, alpha],
+                    
+                    radius: 20,                
+                    extruded: true,
+                    pickable: true,            
+                    onClick: (info) => {
+                        if (info && info.object && info.object.url) {
+                            openBuildingPopup(info.object, info.x, info.y);
+                        }
+                    }
+                })
+            ];
+        }
         // Funktion zum Positionieren und Befüllen des Infofensters
         function openBuildingPopup(building, x, y) {
             const popup = document.getElementById('popup');
@@ -291,6 +350,7 @@
             document.getElementById('popup').style.display = 'none';
         }
 
+        // Funktion 1: Schneller, direkter Koordinaten-Sprung (Jump)
         function jumpTo(lat, lon, buttonId, element) {
             closePopup();
             const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
@@ -299,17 +359,44 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: targetZoom
+                zoom: targetZoom,
+                transitionDuration: 0 // Sofortiger Wechsel ohne Animation
             };
             deckgl.setProps({viewState: viewState});
+            updateActiveButton(element);
+        }
 
-            const buttons = document.querySelectorAll('.btn-group .btn-control');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            if (element) {
-                element.classList.add('active');
+        // Funktion 2: Weiche, dreidimensionale Fluganimation (Fly-To)
+        function flyTo(lat, lon, buttonId, element) {
+            closePopup();
+            const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
+
+            viewState = {
+                ...viewState,
+                latitude: lat,
+                longitude: lon,
+                zoom: targetZoom,
+                // Nutzt den eingebauten FlyToInterpolator von deck.gl für sanftes Gleiten
+                transitionInterpolator: new deck.FlyToInterpolator({speed: 1.2}),
+                transitionDuration: 'auto' // Errechnet die Dauer passend zur Entfernung
+            };
+            deckgl.setProps({viewState: viewState});
+            updateActiveButton(element);
+        }
+
+        // Hilfsfunktion zum Umschalten der Button-Aktivierung im CSS
+        function updateActiveButton(clickedElement) {
+            // Setzt alle Jump-Buttons zurück
+            const jumpButtons = document.querySelectorAll('.poi-jump-btn');
+            jumpButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Wenn es ein Jump-Button war, färbe ihn blau
+            if (clickedElement && clickedElement.classList.contains('poi-jump-btn')) {
+                clickedElement.classList.add('active');
             }
         }
 
+        // Steuert den Autopiloten (Kamera-Rotation)
         function toggleRotation() {
             const btn = document.getElementById('rotationBtn');
 
@@ -324,38 +411,33 @@
                 rotationInterval = setInterval(() => {
                     viewState = {
                         ...viewState,
-                        bearing: (viewState.bearing + 0.25) % 360
+                        bearing: (viewState.bearing + 0.25) % 360,
+                        transitionDuration: 0 // Wichtig: Keine Verzögerung beim Rotieren!
                     };
                     deckgl.setProps({viewState: viewState});
                 }, 40);
             }
         }
 
+        // Steuert den Neigungswinkel (Tilt/Pitch) stufenweise
         function changeTilt(delta) {
             const nextPitch = Math.max(0, Math.min(60, viewState.pitch + delta));
             viewState = {
                 ...viewState,
-                pitch: nextPitch
+                pitch: nextPitch,
+                transitionDuration: 100 // Kurze, weiche Neigungsanimation
             };
             deckgl.setProps({viewState: viewState});
         }
-                // NEU: Hilfsfunktion zur Umrechnung von Hex-Farben (#ffffff) in das deck.gl RGB-Array [255, 255, 255, alpha]
+
+        // Hilfsfunktion zur Umrechnung von Hex-Farben (#ffffff) in das deck.gl RGB-Array [R, G, B, Alpha]
         function hexToRgb(hex, alpha = 255) {
-            // Bereinigt das '#' falls vorhanden
             hex = hex.replace(/^#/, '');
-            
-            // Behandelt Kurzformen wie #FFF
             if (hex.length === 3) {
                 hex = hex.split('').map(char => char + char).join('');
             }
-            
             const num = parseInt(hex, 16);
-            return [
-                (num >> 16) & 255, // Rot
-                (num >> 8) & 255,  // Grün
-                num & 255,         // Blau
-                alpha              // Transparenz
-            ];
+            return [(num >> 16) & 255, (num >> 8) & 255, num & 255, alpha];
         }
     </script>
 </body>

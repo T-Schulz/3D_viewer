@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 6 - OSM 3D Prototyp + Interaktiv Pro</title>
+    
+    <!-- Die modernen deck.gl und MapLibre Bibliotheken aus Option 4 -->
+    <script src="https://unpkg.com/deck.gl@~9.0.0/dist.min.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --card-bg: rgba(30, 41, 59, 0.9);
+            --border-color: #334155;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Der Kartencontainer für deck.gl */
+        #deck-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Erweitertes UI-Overlay aus Option 6 */
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .ui-overlay h1 { font-size: 1.2rem; margin: 0 0 0.5rem 0; color: var(--accent-color); }
+        .ui-overlay p { font-size: 0.85rem; color: #94a3b8; margin: 0 0 1rem 0; line-height: 1.4; }
+        .control-section { border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem; }
+        .control-section h3 { font-size: 0.9rem; margin: 0 0 0.75rem 0; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        
+        .btn-control {
+            background-color: #334155; color: var(--text-color); border: 1px solid #475569;
+            padding: 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+            font-weight: 500; transition: background-color 0.2s, border-color 0.2s; text-align: center;
+        }
+        .btn-control:hover { background-color: #475569; border-color: var(--accent-color); }
+        .btn-control.active { background-color: var(--accent-color); color: #0f172a; border-color: var(--accent-hover); font-weight: 600; }
+
+        .btn-back {
+            display: block; background-color: #1e293b; color: #94a3b8; text-decoration: none;
+            font-size: 0.85rem; font-weight: 600; padding: 0.6rem; border-radius: 6px;
+            border: 1px solid var(--border-color); text-align: center; margin-top: 1rem;
+        }
+        .btn-back:hover { background-color: #334155; color: var(--text-color); }
+
+        /* Das Info-Unterfenster aus Option 6 */
+        .building-popup {
+            position: absolute; z-index: 2000; background: #1e293b; border: 2px solid var(--accent-color);
+            padding: 1rem; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 260px; display: none; pointer-events: auto;
+        }
+        .building-popup h4 { margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; }
+        .building-popup p { margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.3; }
+        
+        .popup-close { position: absolute; top: 5px; right: 8px; background: none; border: none; color: #64748b; cursor: pointer; font-size: 0.9rem; }
+        .popup-close:hover { color: #f8fafc; }
+
+        .controls-hint {
+            position: absolute; bottom: 20px; right: 20px; z-index: 1000; background: var(--card-bg);
+            border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px;
+            font-size: 0.8rem; color: #94a3b8; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Der deck.gl Container aus Option 4 -->
+    <div id="deck-container"></div>
+
+    <!-- Das Steuerungsmenü aus Option 6 -->
+    <div class="ui-overlay">
+        <h1>6. OSM 3D Pro</h1>
+        <p>Interaktiver deck.gl-Viewer mit funktionierender Maus-Interaktion und Jump-Funktion.</p>
+
+        <div class="control-section">
+            <h3>Koordinaten-Sprung (Jump)</h3>
+            <div class="btn-group">
+                <button class="btn-control active" onclick="jumpTo(51.51494, 7.45423, 'u', this)">Dortmunder U (Zentrum)</button>
+                <button class="btn-control" onclick="jumpTo(51.51772, 7.45929, 'hbf', this)">Hauptbahnhof Dortmund</button>
+                <button class="btn-control" onclick="jumpTo(51.49259, 7.45184, 'bvb', this)">Signal Iduna Park (Stadion)</button>
+                <button class="btn-control" onclick="jumpTo(51.49301, 7.41444, 'tu', this)">TU Dortmund (Campus Nord)</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>Kamera-Rotation</h3>
+            <button id="rotationBtn" class="btn-control" style="width: 100%;" onclick="toggleRotation()">Autopilot: Starten</button>
+        </div>
+
+        <div class="control-section">
+            <h3>Ansicht neigen (Tilt)</h3>
+            <div class="btn-grid-2">
+                <button class="btn-control" onclick="changeTilt(5)">Steiler (+)</button>
+                <button class="btn-control" onclick="changeTilt(-5)">Flacher (-)</button>
+            </div>
+        </div>
+
+        <a href="index.html" class="btn-back">← Zur Hauptübersicht</a>
+    </div>
+
+    <!-- Das interaktive Popup aus Option 6 -->
+    <div id="popup" class="building-popup">
+        <button class="popup-close" onclick="closePopup()">×</button>
+        <h4 id="popup-title">Gebäude-Info</h4>
+        <p id="popup-desc">Beschreibung</p>
+        <a id="popup-link" href="#" class="btn-control" style="display: block; font-size: 0.8rem; padding: 0.4rem; text-decoration: none;">Details öffnen</a>
+    </div>
+
+    <div class="controls-hint">
+        3D-Säule anklicken für Details | Mausberührung zeigt Reaktion
+    </div>
+    <script>
+        // Globale Variablen für Steuerungslogik und Kartenstatus
+        let deckgl;
+        let rotationInterval = null;
+        
+        // Zentraler Kamerastatus (ViewState), den deck.gl benötigt
+        let viewState = {
+            latitude: 51.51494,
+            longitude: 7.45423,
+            zoom: 17,
+            pitch: 45,      // Neigungswinkel (Tilt)
+            bearing: 0,     // Rotationswinkel
+            maxZoom: 19,
+            minZoom: 15
+        };
+
+        // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
+        const highlightBuildings = [
+            { id: 'u', name: 'Dortmunder U', lat: 51.51494, lon: 7.45423, height: 110, desc: 'Ehemaliges Unions-Brauereigebäude, heute das bekannte Zentrum für Kunst und Kreativität.', url: 'details_u.html' },
+            { id: 'hbf', name: 'Hauptbahnhof Dortmund', lat: 51.51772, lon: 7.45929, height: 90, desc: 'Zentraler Schienenknotenpunkt Westfalens mit täglichem Passagierstrom.', url: 'details_hbf.html' },
+            { id: 'bvb', name: 'Signal Iduna Park', lat: 51.49259, lon: 7.45184, height: 95, desc: 'Das größte reine Fußballstadion Deutschlands und Heimat von Borussia Dortmund.', url: 'details_bvb.html' },
+            { id: 'tu', name: 'Mathetower (TU Dortmund)', lat: 51.49301, lon: 7.41444, height: 100, desc: 'Das markante Hauptgebäude der Fakultät für Mathematik auf dem Campus Nord.', url: 'details_tu.html' }
+        ];
+
+        // Farben für die 3D-Säulen definieren (RGBA-Format, passend zu Ihrem Cyan-Design)
+        const r = 56, g = 189, b = 248, alpha = 220; 
+
+        // Startet die App, sobald das Dokument geladen wurde
+        window.onload = function() {
+            initDeckGL();
+        };
+
+        function initDeckGL() {
+            const container = document.getElementById('deck-container');
+            const tileUrl = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+            // NEU: API-Link zu den globalen, freien 3D-Gebäude-Vektorkacheln (OSM Buildings MVT-Schnittstelle)
+            // Diese Kacheln liefern die 3D-Häuserstrukturen direkt für deck.gl
+            const buildings3DUrl = "https://a.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json";
+
+            deckgl = new deck.DeckGL({
+                container: container,
+                initialViewState: viewState,
+                controller: true, 
+                
+                onViewStateChange: ({viewState: nextViewState}) => {
+                    viewState = nextViewState;
+                    deckgl.setProps({viewState: viewState});
+                    closePopup(); 
+                },
+
+                onHover: ({object}) => {
+                    // Ändert den Cursor nur, wenn wir eine unserer interaktiven Säulen berühren (erkennbar am Feld 'url')
+                    container.style.cursor = (object && object.url) ? 'pointer' : 'default';
+                },
+
+                layers: [
+                    // Ebene 1: Die CORS-sichere 2D-Hintergrundkarte
+                    new deck.TileLayer({
+                        id: 'live-base-map',
+                        data: tileUrl,
+                        minZoom: 15,
+                        maxZoom: 19,
+                        tileSize: 256,
+                        loadOptions: {
+                            image: { type: 'image', decode: true }
+                        },
+                        renderSubLayers: props => {
+                            const {bbox} = props.tile;
+                            return new deck.BitmapLayer({
+                                id: props.id,
+                                image: props.data,
+                                bounds: [bbox.west, bbox.south, bbox.east, bbox.north]
+                            });
+                        }
+                    }),
+                    
+                    // Ebene 2: Der 3D-Gebäude-Layer mit den ORIGINALEN, abwechslungsreichen OSM-Farben
+                    new deck.TileLayer({
+                        id: 'osm-3d-buildings',
+                        data: buildings3DUrl,
+                        minZoom: 15, 
+                        maxZoom: 19,
+                        onTileError: () => {}, // KORREKTUR: Fängt den 400er-Fehler beim Scrollen stumm ab
+                        renderSubLayers: props => {
+                            return new deck.GeoJsonLayer({
+                                id: props.id,
+                                data: props.data,
+                                extruded: true,                    
+                                wireframe: false,
+                                getElevation: f => f.properties.height || f.properties.levels * 3 || 15, 
+                                
+                                // KORREKTUR: Liest die originale Farbe aus den OSM-Daten aus
+                                // Falls keine Farbe definiert ist, wird ein Standard-Grau [220, 225, 230] genutzt
+                                getFillColor: f => {
+                                    const hexColor = f.properties.color || f.properties.roofColor || "#dcdee6";
+                                    return hexToRgb(hexColor, 160); // 160 ist die Transparenz (Alpha: 0-255)
+                                },
+                                
+                                // Dezent dunklere Konturlinien für plastischere Tiefenwirkung
+                                getLineColor: f => {
+                                    const hexColor = f.properties.color || "#94a3b8";
+                                    return hexToRgb(hexColor, 255);
+                                }
+                            });
+                        }
+                    }),
+                    
+                    // Ebene 3: Ihre interaktiven 3D-Highlight-Säulen
+                    // Liegen ganz oben, damit sie aus den Dächern heraufragen
+                    new deck.ColumnLayer({
+                        id: "dortmund-columns",
+                        data: highlightBuildings,
+                        getPosition: d => [d.lon, d.lat],
+                        getElevation: d => d.height,
+                        getFillColor: [r, g, b, alpha],
+                        radius: 20,                
+                        extruded: true,
+                        pickable: true,            
+                        onClick: (info) => {
+                            if (info && info.object && info.object.url) {
+                                openBuildingPopup(info.object, info.x, info.y);
+                            }
+                        }
+                    })
+                ]
+            });
+        }
+
+        // Funktion zum Positionieren und Befüllen des Infofensters
+        function openBuildingPopup(building, x, y) {
+            const popup = document.getElementById('popup');
+            document.getElementById('popup-title').innerText = building.name;
+            document.getElementById('popup-desc').innerText = building.desc;
+            document.getElementById('popup-link').href = building.url;
+
+            popup.style.left = (x + 15) + 'px';
+            popup.style.top = (y - 50) + 'px';
+            popup.style.display = 'block';
+        }
+
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        function jumpTo(lat, lon, buttonId, element) {
+            closePopup();
+            const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
+
+            viewState = {
+                ...viewState,
+                latitude: lat,
+                longitude: lon,
+                zoom: targetZoom
+            };
+            deckgl.setProps({viewState: viewState});
+
+            const buttons = document.querySelectorAll('.btn-group .btn-control');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            }
+        }
+
+        function toggleRotation() {
+            const btn = document.getElementById('rotationBtn');
+
+            if (rotationInterval) {
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+                btn.classList.remove('active');
+                btn.innerText = "Autopilot: Starten";
+            } else {
+                btn.classList.add('active');
+                btn.innerText = "Autopilot: Stoppen";
+                rotationInterval = setInterval(() => {
+                    viewState = {
+                        ...viewState,
+                        bearing: (viewState.bearing + 0.25) % 360
+                    };
+                    deckgl.setProps({viewState: viewState});
+                }, 40);
+            }
+        }
+
+        function changeTilt(delta) {
+            const nextPitch = Math.max(0, Math.min(60, viewState.pitch + delta));
+            viewState = {
+                ...viewState,
+                pitch: nextPitch
+            };
+            deckgl.setProps({viewState: viewState});
+        }
+                // NEU: Hilfsfunktion zur Umrechnung von Hex-Farben (#ffffff) in das deck.gl RGB-Array [255, 255, 255, alpha]
+        function hexToRgb(hex, alpha = 255) {
+            // Bereinigt das '#' falls vorhanden
+            hex = hex.replace(/^#/, '');
+            
+            // Behandelt Kurzformen wie #FFF
+            if (hex.length === 3) {
+                hex = hex.split('').map(char => char + char).join('');
+            }
+            
+            const num = parseInt(hex, 16);
+            return [
+                (num >> 16) & 255, // Rot
+                (num >> 8) & 255,  // Grün
+                num & 255,         // Blau
+                alpha              // Transparenz
+            ];
+        }
+    </script>
+</body>
+</html>
