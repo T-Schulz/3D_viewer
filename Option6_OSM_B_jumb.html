@@ -142,12 +142,12 @@
 
     <div class="ui-overlay">
         <h1>6. OSM 3D Pro</h1>
-        <p>Interaktiver deck.gl-Viewer mit Live-Debug-Werten und korrigierten Zoomstufen (11 bis 15).</p>
+        <p>Interaktiver Viewer mit Ihrer optimierten "goldenen" Zoom-Mitte und Hover-Farbwechsel.</p>
 
         <!-- Live-Zoom-Anzeige -->
         <div class="zoom-display">
             <span>AKTUELLER ZOOM:</span>
-            <span id="zoom-value">13.00</span>
+            <span id="zoom-value">15.50</span>
         </div>
 
         <div class="control-section">
@@ -204,22 +204,21 @@
     <div class="controls-hint">
         Säule berühren (Farbe wechselt!) | Linksklick öffnet Popup
     </div>
-        <script>
+    <script>
         // Globale Variablen für Steuerungslogik und Kartenstatus
         let deckgl;
         let rotationInterval = null;
         let hoveredObjectId = null; // Speichert das aktuell berührte Gebäude für den Farbwechsel
         
-        // KORREKTUR: Zoom-Faktoren in die richtige Richtung angepasst!
-        // Startwert liegt bei 13.0, die Untergrenze bei 11.0 und die Obergrenze bei 15.0
+        // KORREKTUR: Ihre exakt ermittelte "goldene Mitte" fest im System verankert
         let viewState = {
             latitude: 51.51494,
             longitude: 7.45423,
-            zoom: 13,       // KORREKTUR: Optimaler Start-Korridor für 3D-Vektoren
+            zoom: 15.5,     // KORREKTUR: Normaler Start-Zoom
             pitch: 45,      // Neigungswinkel (Tilt)
             bearing: 0,     // Rotationswinkel
-            maxZoom: 15,    // KORREKTUR: Verhindert zu nahes Heranzommen ohne Daten
-            minZoom: 11     // KORREKTUR: Verriegelt das weite Rauszoomen
+            maxZoom: 17,    // KORREKTUR: Maximaler Zoom-In
+            minZoom: 14.7   // KORREKTUR: Minimaler Zoom-Out (Zwingt die 3D-Häuser zur permanenten Sichtbarkeit)
         };
 
         // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
@@ -256,7 +255,7 @@
                     document.getElementById('zoom-value').innerText = viewState.zoom.toFixed(2);
                 },
 
-                // Dynamischer Hover-Effekt (Farbwechsel Blau -> Rot)
+                // Dynamischer Hover-Effekt (Farbwechsel Blau -> Rot) mit VSC-Korrektur
                 onHover: (info) => {
                     if (info && info.object && info.object.url) {
                         container.style.cursor = 'pointer';
@@ -305,8 +304,8 @@
                 new deck.TileLayer({
                     id: 'osm-3d-buildings',
                     data: buildings3DUrl,
-                    minZoom: 10, // KORREKTUR: minZoom auf 10 abgesenkt, damit die Häuser permanent sichtbar sind
-                    maxZoom: 16, // KORREKTUR: maxZoom auf 16 fixiert
+                    minZoom: 14, 
+                    maxZoom: 19,
                     onTileError: () => {}, 
                     renderSubLayers: props => {
                         return new deck.GeoJsonLayer({
@@ -327,21 +326,24 @@
                     }
                 }),
                 
-                // Ebene 3: Die interaktiven 3D-Highlight-Säulen mit Hover-Farbwechsel
+                // Ebene 3: Die interaktiven 3D-Highlight-Säulen mit harmonischen Proportionen
                 new deck.ColumnLayer({
                     id: "dortmund-columns",
                     data: highlightBuildings,
                     getPosition: d => [d.lon, d.lat],
-                    getElevation: d => d.height * 2.5, // KORREKTUR: Erhöht, damit sie im neuen Zoom-Faktor gut sichtbar sind
                     
-                    // KORREKTUR: Wenn berührt (hovered), färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
+                    // KORREKTUR: Höhenfaktor von 2.5 auf 1.5 reduziert für realistische Proportionen
+                    getElevation: d => d.height * 1.5, 
+                    
+                    // KORREKTUR: Vollständiger ternärer Operator für den Farbwechsel (VSC-geprüft)
                     getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, alpha] : [r, g, b, alpha],
                     
                     updateTriggers: {
                         getFillColor: [hoveredObjectId]
                     },
                     
-                    radius: 40, // KORREKTUR: Radius leicht vergrößert für bessere Sichtbarkeit aus der Distanz               
+                    // KORREKTUR: Radius von 40 auf 25 herabgesetzt, um optisch perfekt zu den Dächern zu passen
+                    radius: 25,                
                     extruded: true,
                     pickable: true,            
                     onClick: (info) => {
@@ -368,7 +370,7 @@
             document.getElementById('popup').style.display = 'none';
         }
 
-        // KORREKTUR: Zoomstufe einheitlich auf den optimalen Vektor-Korridor 13.0 gesetzt
+        // KORREKTUR: Zoomstufe einheitlich auf Ihren optimalen "goldenen" Wert 15.50 gesetzt
         function jumpTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -376,7 +378,7 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 13.0, // KORREKTUR: Fester, optimaler Zoomwert für sofortige 3D-Sicht
+                zoom: 15.5, // KORREKTUR: Landet exakt in Ihrer optimalen 3D-Sichtgrenze
                 transitionDuration: 0 // Sofortiger Wechsel ohne Verzögerung
             };
             deckgl.setProps({viewState: viewState});
@@ -386,7 +388,7 @@
             document.getElementById('zoom-value').innerText = viewState.zoom.toFixed(2);
         }
 
-        // KORREKTUR: Fly-To Fluganimation landet nun exakt auf der stabilen 3D-Stufe 13.0
+        // KORREKTUR: Fly-To Fluganimation landet nun exakt auf Ihrer stabilen 3D-Stufe 15.50
         function flyTo(lat, lon, buttonId, element) {
             closePopup();
 
@@ -394,7 +396,7 @@
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: 13.0, // KORREKTUR: Garantiert die dauerhafte Sichtbarkeit der 3D-Häuser nach dem Flug
+                zoom: 15.5, // KORREKTUR: Garantiert das sofortige Vorladen der echten OSM-Häuser
                 transitionInterpolator: new deck.FlyToInterpolator({speed: 1.2}),
                 transitionDuration: 'auto'
             };
@@ -457,4 +459,4 @@
         }
     </script>
 </body>
-</html>        
+</html>            
