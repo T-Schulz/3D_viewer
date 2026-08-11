@@ -18,8 +18,8 @@
             --accent-hover: #0ea5e9;
             --card-bg: rgba(30, 41, 59, 0.95);
             --border-color: #334155;
-            --btn-fly: #22c55e;
-            --btn-fly-hover: #16a34a;
+            --btn-fly: #16a34a;
+            --btn-fly-hover: #15803d;
         }
 
         html, body {
@@ -51,7 +51,7 @@
             border: 1px solid var(--border-color);
             padding: 1.5rem;
             border-radius: 12px;
-            width: 380px; /* Leicht verbreitert für die Buttons */
+            width: 380px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
             max-height: 90vh;
@@ -95,9 +95,9 @@
 
         /* Grüner Stil für den Fly-To Button */
         .btn-fly {
-            background-color: #16a34a; color: white; border: 1px solid #22c55e;
+            background-color: var(--btn-fly); color: white; border: 1px solid #22c55e;
         }
-        .btn-fly:hover { background-color: #15803d; border-color: #4ade80; }
+        .btn-fly:hover { background-color: var(--btn-fly-hover); border-color: #4ade80; }
 
         .btn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 
@@ -199,15 +199,15 @@
         let rotationInterval = null;
         let hoveredObjectId = null; // Speichert das aktuell berührte Gebäude für den Farbwechsel
         
-        // Zentraler Kamerastatus (ViewState), den deck.gl benötigt
+        // KORREKTUR: Zoom einheitlich auf 17 gesetzt, minZoom auf 15 und maxZoom auf 19 festgenagelt
         let viewState = {
             latitude: 51.51494,
             longitude: 7.45423,
-            zoom: 16,
+            zoom: 17,
             pitch: 45,      // Neigungswinkel (Tilt)
             bearing: 0,     // Rotationswinkel
-            maxZoom: 19,
-            minZoom: 13
+            maxZoom: 19,    // KORREKTUR: Obergrenze
+            minZoom: 15     // KORREKTUR: Untergrenze (Verhindert Verschwinden der 3D-Gebäude)
         };
 
         // Datenbank für die 4 Highlight-Gebäude inklusive Koordinaten und Infotexten
@@ -231,7 +231,7 @@
 
             deckgl = new deck.DeckGL({
                 container: container,
-                viewState: viewState, // Nutzt die reaktive Bindung statt initialViewState für Animationen
+                viewState: viewState, 
                 controller: true, 
                 
                 onViewStateChange: ({viewState: nextViewState}) => {
@@ -240,21 +240,19 @@
                     closePopup(); 
                 },
 
-                // Dynamischer Hover-Effekt (Farbwechsel Blau -> Rot)
+                // KORREKTUR: Dynamischer Hover-Effekt mit sofortiger Shader-Aktualisierung
                 onHover: (info) => {
                     if (info && info.object && info.object.url) {
-                        // Maus berührt eine Highlightsäule
                         container.style.cursor = 'pointer';
                         if (hoveredObjectId !== info.object.id) {
                             hoveredObjectId = info.object.id;
-                            deckgl.setProps({layers: buildLayers()}); // Layer neu zeichnen mit neuer Farbe
+                            deckgl.setProps({layers: buildLayers()}); // Erzwingt das Neuzeichnen der Ebenen
                         }
                     } else {
-                        // Maus verlässt die Säule
                         container.style.cursor = 'default';
                         if (hoveredObjectId !== null) {
                             hoveredObjectId = null;
-                            deckgl.setProps({layers: buildLayers()}); // Layer zurücksetzen auf Blau
+                            deckgl.setProps({layers: buildLayers()}); // Setzt die Farbe wieder zurück
                         }
                     }
                 },
@@ -263,7 +261,7 @@
             });
         }
 
-        // Hilfsfunktion zum dynamischen Generieren der Layer (wichtig für die Farbänderung zur Laufzeit)
+        // Generiert die Layer und steuert den Farbwechsel im Grafikprozessor
         function buildLayers() {
             const tileUrl = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png";
             const buildings3DUrl = "https://a.data.osmbuildings.org/0.2/59fcc2e8/tile/{z}/{x}/{y}.json";
@@ -293,7 +291,7 @@
                     data: buildings3DUrl,
                     minZoom: 14, 
                     maxZoom: 19,
-                    onTileError: () => {}, // Fängt den 400er-Fehler beim Scrollen stumm ab
+                    onTileError: () => {}, 
                     renderSubLayers: props => {
                         return new deck.GeoJsonLayer({
                             id: props.id,
@@ -313,15 +311,20 @@
                     }
                 }),
                 
-                // Ebene 3: Die interaktiven 3D-Highlight-Säulen mit Hover-Farbwechsel
+                // Ebene 3: Die interaktiven 3D-Säulen mit Hover-Farbwechsel
                 new deck.ColumnLayer({
                     id: "dortmund-columns",
                     data: highlightBuildings,
                     getPosition: d => [d.lon, d.lat],
                     getElevation: d => d.height,
                     
-                    // Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig CYAN-BLAU [r, g, b]
+                    // KORREKTUR: Wenn das Gebäude berührt wird, färbe es ROT, sonst standardmäßig BLAU [r, g, b]
                     getFillColor: d => d.id === hoveredObjectId ? [239, 68, 68, 240] : [r, g, b, alpha],
+                    
+                    // KORREKTUR: updateTriggers teilt deck.gl mit, dass es bei einer ID-Änderung die Farbe neu berechnen MUSS
+                    updateTriggers: {
+                        getFillColor: [hoveredObjectId]
+                    },
                     
                     radius: 20,                
                     extruded: true,
@@ -350,32 +353,30 @@
             document.getElementById('popup').style.display = 'none';
         }
 
-        // Funktion 1: Schneller, direkter Koordinaten-Sprung (Jump)
+        // KORREKTUR: Zoomstufe einheitlich auf 17 gesetzt, damit 3D-Gebäude nicht verschwinden
         function jumpTo(lat, lon, buttonId, element) {
             closePopup();
-            const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
 
             viewState = {
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: targetZoom,
+                zoom: 17, // KORREKTUR: Einheitlicher Detail-Zoom
                 transitionDuration: 0 // Sofortiger Wechsel ohne Animation
             };
             deckgl.setProps({viewState: viewState});
             updateActiveButton(element);
         }
 
-        // Funktion 2: Weiche, dreidimensionale Fluganimation (Fly-To)
+        // KORREKTUR: Fly-To Fluganimation auf die feste Zoomstufe 17 angepasst
         function flyTo(lat, lon, buttonId, element) {
             closePopup();
-            const targetZoom = (buttonId === 'bvb' || buttonId === 'tu') ? 15.5 : 16.5;
 
             viewState = {
                 ...viewState,
                 latitude: lat,
                 longitude: lon,
-                zoom: targetZoom,
+                zoom: 17, // KORREKTUR: Einheitlicher Detail-Zoom für perfekten 3D-Blick
                 // Nutzt den eingebauten FlyToInterpolator von deck.gl für sanftes Gleiten
                 transitionInterpolator: new deck.FlyToInterpolator({speed: 1.2}),
                 transitionDuration: 'auto' // Errechnet die Dauer passend zur Entfernung
