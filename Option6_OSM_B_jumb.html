@@ -207,7 +207,7 @@
                     new deck.TileLayer({
                         id: 'live-base-map',
                         data: tileUrl,
-                        minZoom: 0,
+                        minZoom: 15,
                         maxZoom: 19,
                         tileSize: 256,
                         loadOptions: {
@@ -227,8 +227,9 @@
                     new deck.TileLayer({
                         id: 'osm-3d-buildings',
                         data: buildings3DUrl,
-                        minZoom: 14, 
+                        minZoom: 15, 
                         maxZoom: 19,
+                        onTileError: () => {}, // KORREKTUR: Fängt den 400er-Fehler beim Scrollen stumm ab
                         renderSubLayers: props => {
                             return new deck.GeoJsonLayer({
                                 id: props.id,
