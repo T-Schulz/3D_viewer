@@ -223,22 +223,32 @@
                         }
                     }),
                     
-                    // NEU Ebene 2: Der 3D-Gebäude-Layer (Streamt die echten OSM-Häuser in 3D)
-                    // Liest die Höhenattribute der Stadt Dortmund aus und extrudiert die Wände im WebGL-Shader
+                    // Ebene 2: Der 3D-Gebäude-Layer mit den ORIGINALEN, abwechslungsreichen OSM-Farben
                     new deck.TileLayer({
                         id: 'osm-3d-buildings',
                         data: buildings3DUrl,
-                        minZoom: 14, // Wird erst ab Zoom 14 sichtbar, um Performance zu schonen
+                        minZoom: 14, 
                         maxZoom: 19,
                         renderSubLayers: props => {
                             return new deck.GeoJsonLayer({
                                 id: props.id,
                                 data: props.data,
-                                extruded: true,                    // Zieht die Wände in 3D nach oben
+                                extruded: true,                    
                                 wireframe: false,
-                                getElevation: f => f.properties.height || 15, // Liest die OSM-Gebäudehöhe aus
-                                getFillColor: [241, 245, 249, 140], // Edles, halbtransparentes Weißgrau für die Stadt
-                                getLineColor: [148, 163, 184, 255]
+                                getElevation: f => f.properties.height || f.properties.levels * 3 || 15, 
+                                
+                                // KORREKTUR: Liest die originale Farbe aus den OSM-Daten aus
+                                // Falls keine Farbe definiert ist, wird ein Standard-Grau [220, 225, 230] genutzt
+                                getFillColor: f => {
+                                    const hexColor = f.properties.color || f.properties.roofColor || "#dcdee6";
+                                    return hexToRgb(hexColor, 160); // 160 ist die Transparenz (Alpha: 0-255)
+                                },
+                                
+                                // Dezent dunklere Konturlinien für plastischere Tiefenwirkung
+                                getLineColor: f => {
+                                    const hexColor = f.properties.color || "#94a3b8";
+                                    return hexToRgb(hexColor, 255);
+                                }
                             });
                         }
                     }),
