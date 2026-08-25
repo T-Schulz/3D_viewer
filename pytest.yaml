@@ -1,0 +1,34 @@
+name: KI Link Checker CI
+
+# Die Pipeline startet bei jedem Push oder Pull-Request im main-Branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Quellcode aus dem GitHub-Repository auschecken
+    - name: Code auschecken
+      uses: actions/checkout@v4
+
+    # 2. Python-Umgebung auf dem Linux-Server einrichten
+    - name: Python einrichten
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 3. Benötigte Bibliotheken (Dependencies) installieren
+    - name: Abhängigkeiten installieren
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest requests pytest-mock
+
+    # 4. Den eigentlichen Test ausführen
+    - name: Tests mit pytest ausführen
+      run: |
+        pytest test_ai_links_advanced.py -v
